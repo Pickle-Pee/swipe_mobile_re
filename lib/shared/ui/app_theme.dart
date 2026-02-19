@@ -1,32 +1,41 @@
 import 'package:flutter/material.dart';
+
 import '../theme/tokens.dart';
 
 class AppTheme {
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppTokens.electricBlue,
-      brightness: Brightness.light,
+    const textTheme = TextTheme(
+      headlineLarge: TextStyle(fontSize: 30, fontWeight: FontWeight.w300, color: AppTokens.textPrimary),
+      headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.w300, color: AppTokens.textPrimary),
+      titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w300, color: AppTokens.textPrimary),
+      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: AppTokens.textPrimary),
+      bodyLarge: TextStyle(fontSize: 16, color: AppTokens.textSecondary),
+      bodyMedium: TextStyle(fontSize: 14, color: AppTokens.textSecondary),
+      bodySmall: TextStyle(fontSize: 12, color: AppTokens.textMuted),
+    );
+
+    final colorScheme = const ColorScheme.dark(
+      primary: AppTokens.blueSoft,
+      secondary: AppTokens.pinkSoft,
       surface: AppTokens.surface,
+      onPrimary: Colors.white,
+      onSurface: AppTokens.textPrimary,
+      error: Color(0xFFFF8FA0),
     );
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: AppTokens.bg,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        color: AppTokens.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusMd),
-        ),
-      ),
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: Colors.transparent,
+      colorScheme: colorScheme,
+      textTheme: textTheme,
+      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0),
+      dividerColor: AppTokens.border,
       inputDecorationTheme: InputDecorationTheme(
+        hintStyle: textTheme.bodyMedium?.copyWith(color: AppTokens.textMuted),
         filled: true,
-        fillColor: AppTokens.surface.withOpacity(0.8),
+        fillColor: AppTokens.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppTokens.radiusMd),
           borderSide: BorderSide.none,
@@ -35,15 +44,5 @@ class AppTheme {
     );
   }
 
-  static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppTokens.neonMagenta,
-      brightness: Brightness.dark,
-    );
-
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-    );
-  }
+  static ThemeData dark() => light();
 }
