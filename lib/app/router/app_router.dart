@@ -10,6 +10,7 @@ import '../../features/onboarding/registration_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/subscription/subscription_screen.dart';
+import '../shell/main_shell.dart';
 import 'routes.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -24,28 +25,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: Routes.register,
         builder: (context, state) => const RegistrationScreen(),
       ),
-      GoRoute(
-        path: Routes.discover,
-        builder: (context, state) => const DiscoveryScreen(),
+
+      // Tabs shell: Discover is the FIRST tab
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.discover,
+                builder: (context, state) => const DiscoveryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.chats,
+                builder: (context, state) => const ChatListScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.likes,
+                builder: (context, state) => const LikesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.profile,
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
-      GoRoute(
-        path: Routes.chats,
-        builder: (context, state) => const ChatListScreen(),
-      ),
+
+      // Non-tab routes
       GoRoute(
         path: '/chat/:id',
         builder: (context, state) {
           final chatId = state.pathParameters['id'] ?? '';
           return ChatScreen(chatId: chatId);
         },
-      ),
-      GoRoute(
-        path: Routes.profile,
-        builder: (context, state) => const ProfileScreen(),
-      ),
-      GoRoute(
-        path: Routes.likes,
-        builder: (context, state) => const LikesScreen(),
       ),
       GoRoute(
         path: Routes.settings,

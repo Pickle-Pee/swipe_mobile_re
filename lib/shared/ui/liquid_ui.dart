@@ -1,6 +1,6 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:swipe_mobile_re/shared/ui/animated_liquid_background.dart';
 
 import '../theme/tokens.dart';
 
@@ -11,9 +11,72 @@ class AppGradientScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(gradient: AppTokens.appBackground),
-      child: SafeArea(child: child),
+    return Stack(
+      children: [
+        // 1) Base gradient (ONE source of truth)
+        const Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(gradient: AppTokens.appBackground),
+          ),
+        ),
+
+        // 2) Atmosphere layer (ONLY glow fields, no base/vignette inside!)
+        const Positioned.fill(child: AiAtmosphericBackground()),
+
+        // 3) Vignette (ONE)
+        const Positioned.fill(child: _Vignette()),
+
+        // 4) Content
+        SafeArea(child: child),
+      ],
+    );
+  }
+}
+
+class _Vignette extends StatelessWidget {
+  const _Vignette();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.0, 0.15),
+            radius: 1.15,
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.28),
+              Colors.black.withOpacity(0.46),
+            ],
+            stops: const [0.0, 0.72, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToneOverlay extends StatelessWidget {
+  const _ToneOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.0, 0.2),
+            radius: 1.2,
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.06),
+              Colors.black.withOpacity(0.14),
+            ],
+            stops: const [0.0, 0.78, 1.0],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -39,15 +102,21 @@ class GlassSurface extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: AppTokens.blurSm, sigmaY: AppTokens.blurSm),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(color: borderColor),
+        filter: ImageFilter.blur(
+          sigmaX: AppTokens.blurSm,
+          sigmaY: AppTokens.blurSm,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Ink(
+            padding: padding,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(radius),
+              border: Border.all(color: borderColor),
+            ),
+            child: child,
           ),
-          child: child,
         ),
       ),
     );
@@ -55,7 +124,11 @@ class GlassSurface extends StatelessWidget {
 }
 
 class GradientButton extends StatelessWidget {
-  const GradientButton({super.key, required this.label, required this.onPressed});
+  const GradientButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
 
   final String label;
   final VoidCallback onPressed;
@@ -73,17 +146,29 @@ class GradientButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w400)),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
       ),
     );
   }
 }
 
 class PillTag extends StatelessWidget {
-  const PillTag({super.key, required this.label, this.color = AppTokens.blueSoft});
+  const PillTag({
+    super.key,
+    required this.label,
+    this.color = AppTokens.blueSoft,
+  });
 
   final String label;
   final Color color;
@@ -116,9 +201,18 @@ class AiInsightCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: AppTokens.pinkSoft, fontSize: 13)),
+          Text(
+            title,
+            style: const TextStyle(color: AppTokens.pinkSoft, fontSize: 13),
+          ),
           const SizedBox(height: 4),
-          Text(message, style: const TextStyle(color: AppTokens.textSecondary, fontSize: 13)),
+          Text(
+            message,
+            style: const TextStyle(
+              color: AppTokens.textSecondary,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -136,7 +230,10 @@ class SafetyBadge extends StatelessWidget {
       children: [
         Icon(Icons.verified_user_rounded, color: AppTokens.mint, size: 14),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: AppTokens.mint, fontSize: 11)),
+        Text(
+          label,
+          style: const TextStyle(color: AppTokens.mint, fontSize: 11),
+        ),
       ],
     );
   }
@@ -150,7 +247,9 @@ class ChatBubbleGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = mine ? AppTokens.blueSoft.withOpacity(0.2) : AppTokens.surfaceStrong;
+    final color = mine
+        ? AppTokens.blueSoft.withOpacity(0.2)
+        : AppTokens.surfaceStrong;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -159,8 +258,13 @@ class ChatBubbleGlass extends StatelessWidget {
           radius: 22,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           backgroundColor: color,
-          borderColor: mine ? AppTokens.blueSoft.withOpacity(0.45) : AppTokens.border,
-          child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          borderColor: mine
+              ? AppTokens.blueSoft.withOpacity(0.45)
+              : AppTokens.border,
+          child: Text(
+            text,
+            style: const TextStyle(color: AppTokens.textPrimary, fontSize: 14),
+          ),
         ),
       ),
     );
