@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
@@ -28,12 +30,15 @@ class FlutterSecureStorageBackend implements SecureStorageBackend {
 
 class SessionStorage implements ApiTokenStore {
   SessionStorage({SecureStorageBackend? backend})
-      : _backend = backend ?? const FlutterSecureStorageBackend();
+    : _backend = backend ?? const FlutterSecureStorageBackend();
 
   static const accessTokenKey = 'access_token';
   static const refreshTokenKey = 'refresh_token';
 
   final SecureStorageBackend _backend;
+  final _accessTokenChanges = StreamController<String?>.broadcast();
+
+  Stream<String?> get accessTokenChanges => _accessTokenChanges.stream;
 
   Future<bool> get hasSession async {
     final accessToken = await readAccessToken();
@@ -53,8 +58,10 @@ class SessionStorage implements ApiTokenStore {
       throw ArgumentError('Session tokens must not be empty');
     }
     try {
-      await _backend.write(accessTokenKey, _stripBearer(accessToken));
+      final normalizedAccessToken = _stripBearer(accessToken);
+      await _backend.write(accessTokenKey, normalizedAccessToken);
       await _backend.write(refreshTokenKey, _stripBearer(refreshToken));
+      _accessTokenChanges.add(normalizedAccessToken);
     } on Object {
       await clear();
       rethrow;
@@ -65,7 +72,10 @@ class SessionStorage implements ApiTokenStore {
   Future<void> clear() async {
     await _backend.delete(accessTokenKey);
     await _backend.delete(refreshTokenKey);
+    _accessTokenChanges.add(null);
   }
+
+  Future<void> dispose() => _accessTokenChanges.close();
 
   static String _stripBearer(String token) =>
       token.startsWith('Bearer ') ? token.substring(7) : token;
