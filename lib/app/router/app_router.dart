@@ -55,7 +55,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.chats,
-                builder: (context, state) => const ChatListScreen(),
+                builder: (context, state) => ChatListScreen(
+                  initialUserId: int.tryParse(
+                    state.uri.queryParameters['userId'] ?? '',
+                  ),
+                ),
               ),
             ],
           ),
