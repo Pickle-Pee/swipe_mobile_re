@@ -126,6 +126,8 @@ class ApiClient {
         cancelToken: cancelToken,
       );
 
+  Future<bool> refreshSession() => _refreshOnce();
+
   Future<bool> _refreshOnce() async {
     final runningRefresh = _refreshFuture;
     if (runningRefresh != null) {
