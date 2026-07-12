@@ -4,8 +4,9 @@ import '../data/session_storage.dart';
 import 'auth_models.dart';
 
 abstract interface class AuthRepository {
-  Future<void> sendCode(SendCodeRequest request);
+  Future<SendCodeResponse> sendCode(SendCodeRequest request);
   Future<void> checkCode(CheckCodeRequest request);
+  Future<AccountStatus> checkPhone(String phoneNumber);
   Future<AuthUser> register(RegisterRequest request);
   Future<AuthUser> login(LoginRequest request);
   Future<AuthUser> refreshSession();
@@ -25,11 +26,12 @@ class DioAuthRepository implements AuthRepository {
   final SessionStorage _storage;
 
   @override
-  Future<void> sendCode(SendCodeRequest request) async {
-    await _apiClient.post<void>(
+  Future<SendCodeResponse> sendCode(SendCodeRequest request) async {
+    final response = await _apiClient.post<Map<String, dynamic>>(
       '/auth/send_code',
       queryParameters: request.toQueryParameters(),
     );
+    return SendCodeResponse.fromJson(response.data ?? const {});
   }
 
   @override
@@ -38,6 +40,23 @@ class DioAuthRepository implements AuthRepository {
       '/auth/check_code',
       queryParameters: request.toQueryParameters(),
     );
+  }
+
+  @override
+  Future<AccountStatus> checkPhone(String phoneNumber) async {
+    try {
+      await _apiClient.post<void>(
+        '/auth/check_phone',
+        queryParameters: {'phone_number': phoneNumber},
+      );
+    } on ValidationApiException catch (error) {
+      final details = error.details;
+      final code = details is Map<String, dynamic> ? details['code'] : null;
+      if (code == 667) return AccountStatus.newUser;
+      if (code == 612) return AccountStatus.existingUser;
+      rethrow;
+    }
+    throw const FormatException('Unexpected check_phone response');
   }
 
   @override

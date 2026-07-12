@@ -39,7 +39,10 @@ class OnboardingScreen extends StatelessWidget {
                 style: TextStyle(color: AppTokens.textSecondary),
               ),
               const SizedBox(height: 36),
-              GradientButton(label: 'Begin your journey', onPressed: () => context.go(Routes.register)),
+              GradientButton(
+                label: 'Begin your journey',
+                onPressed: () => context.go(Routes.authPhone),
+              ),
             ],
           ),
         ),

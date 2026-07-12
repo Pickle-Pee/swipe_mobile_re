@@ -6,6 +6,24 @@ class SendCodeRequest {
   Map<String, dynamic> toQueryParameters() => {'phone_number': phoneNumber};
 }
 
+class SendCodeResponse {
+  const SendCodeResponse({this.demoVerificationCode});
+
+  final String? demoVerificationCode;
+
+  factory SendCodeResponse.fromJson(Map<String, dynamic> json) {
+    final code = json['verification_code'];
+    return SendCodeResponse(
+      demoVerificationCode: code is String && code.isNotEmpty ? code : null,
+    );
+  }
+}
+
+enum AccountStatus {
+  newUser,
+  existingUser,
+}
+
 class CheckCodeRequest {
   const CheckCodeRequest({
     required this.phoneNumber,

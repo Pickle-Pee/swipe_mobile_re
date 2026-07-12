@@ -68,6 +68,10 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> checkCode(CheckCodeRequest request) async {}
 
   @override
+  Future<AccountStatus> checkPhone(String phoneNumber) async =>
+      AccountStatus.existingUser;
+
+  @override
   Future<AuthUser> login(LoginRequest request) async => const AuthUser(id: 1);
 
   @override
@@ -87,7 +91,8 @@ class FakeAuthRepository implements AuthRepository {
   Future<AuthUser?> restoreSession() async => restoredUser;
 
   @override
-  Future<void> sendCode(SendCodeRequest request) async {}
+  Future<SendCodeResponse> sendCode(SendCodeRequest request) async =>
+      const SendCodeResponse();
 
   @override
   Future<AuthUser> whoAmI() async => restoredUser ?? const AuthUser(id: 1);

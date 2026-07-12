@@ -54,6 +54,32 @@ void main() {
     expect(await storage.readRefreshToken(), 'refresh-one');
   });
 
+  test('sendCode exposes the backend demo code response', () async {
+    final repository = createRepository((options) async {
+      expect(options.path, '/auth/send_code');
+      expect(options.queryParameters['phone_number'], '79990000000');
+      return jsonResponse(200, {'verification_code': '000000'});
+    });
+
+    final response =
+        await repository.sendCode(const SendCodeRequest('79990000000'));
+
+    expect(response.demoVerificationCode, '000000');
+  });
+
+  test('checkPhone maps backend account status codes', () async {
+    Future<AccountStatus> check(int code) {
+      final repository = createRepository((options) async {
+        expect(options.path, '/auth/check_phone');
+        return jsonResponse(400, {'code': code, 'detail': 'status'});
+      });
+      return repository.checkPhone('79990000000');
+    }
+
+    expect(await check(667), AccountStatus.newUser);
+    expect(await check(612), AccountStatus.existingUser);
+  });
+
   test('a new repository instance restores a persisted session', () async {
     await storage.saveTokens('persisted-access', 'persisted-refresh');
     storage = SessionStorage(backend: backend);

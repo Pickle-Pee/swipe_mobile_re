@@ -55,8 +55,9 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> sendCode(SendCodeRequest request) =>
-      _runAction(() => _repository.sendCode(request));
+  Future<void> sendCode(SendCodeRequest request) => _runAction(() async {
+        await _repository.sendCode(request);
+      });
 
   Future<void> checkCode(CheckCodeRequest request) =>
       _runAction(() => _repository.checkCode(request));
