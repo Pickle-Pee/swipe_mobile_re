@@ -89,3 +89,5 @@ Unknown/malformed values fail visibly. Display price derives from minor units an
 Replace legacy `price/duration/features` with `price_minor/duration_days/description` after backend deployment. Remove client `orderId/amount/customerKey/phone`; never call nonexistent `activate_subscription`. Migrate legacy singleton/MethodChannel to repository on shared `ApiClient` and Riverpod. `/premium` currently has no auth guard.
 
 Demo uses backend fake provider and same DTO/state path, with visible label; test DEMO terminal and production secrets remain backend-only. Production forbids demo/local URLs. Automatic recurring Charge is outside this stage; `renewable` is metadata until a separate approved task.
+
+Buyer deployment, build commands, app-link policy and production limitations are documented in `docs/SUBSCRIPTION_BUYER_HANDOFF.md`.
