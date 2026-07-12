@@ -13,6 +13,7 @@ class DiscoveryState {
     this.isProcessing = false,
     this.error,
     this.lastReaction,
+    this.matchedProfile,
   });
 
   final DiscoveryStatus status;
@@ -20,6 +21,7 @@ class DiscoveryState {
   final bool isProcessing;
   final Object? error;
   final DiscoveryReactionResult? lastReaction;
+  final DiscoveryProfile? matchedProfile;
 
   DiscoveryProfile? get current => profiles.isEmpty ? null : profiles.first;
 }
@@ -47,8 +49,7 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     try {
       final profiles = await _repository.getProfiles();
       state = DiscoveryState(
-        status:
-            profiles.isEmpty ? DiscoveryStatus.empty : DiscoveryStatus.data,
+        status: profiles.isEmpty ? DiscoveryStatus.empty : DiscoveryStatus.data,
         profiles: profiles,
       );
     } on Object catch (error) {
@@ -75,10 +76,12 @@ class DiscoveryController extends Notifier<DiscoveryState> {
       final result = await _repository.react(current.id, reaction);
       final remaining = state.profiles.skip(1).toList();
       state = DiscoveryState(
-        status:
-            remaining.isEmpty ? DiscoveryStatus.empty : DiscoveryStatus.data,
+        status: remaining.isEmpty
+            ? DiscoveryStatus.empty
+            : DiscoveryStatus.data,
         profiles: remaining,
         lastReaction: result,
+        matchedProfile: result.isMatch ? current : null,
       );
     } on Object catch (error) {
       state = DiscoveryState(
@@ -87,5 +90,15 @@ class DiscoveryController extends Notifier<DiscoveryState> {
         error: error,
       );
     }
+  }
+
+  void consumeMatch() {
+    state = DiscoveryState(
+      status: state.status,
+      profiles: state.profiles,
+      isProcessing: state.isProcessing,
+      error: state.error,
+      lastReaction: state.lastReaction,
+    );
   }
 }

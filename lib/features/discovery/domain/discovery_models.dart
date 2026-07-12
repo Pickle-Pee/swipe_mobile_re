@@ -48,8 +48,7 @@ class DiscoveryProfile {
     Map<String, dynamic> details,
   ) {
     final rawFirstName = details['first_name'] ?? match['first_name'];
-    final rawDateOfBirth =
-        details['date_of_birth'] ?? match['date_of_birth'];
+    final rawDateOfBirth = details['date_of_birth'] ?? match['date_of_birth'];
     final rawCity = details['city_name'] ?? match['city_name'];
     final rawPhotoUrl = details['avatar_url'] ?? match['avatar_url'];
     final interests = details['interests'] as List<dynamic>? ?? const [];
@@ -65,8 +64,9 @@ class DiscoveryProfile {
     return DiscoveryProfile(
       id: match['user_id'] as int,
       firstName: rawFirstName is String ? rawFirstName : '',
-      dateOfBirth:
-          DateTime.tryParse(rawDateOfBirth is String ? rawDateOfBirth : ''),
+      dateOfBirth: DateTime.tryParse(
+        rawDateOfBirth is String ? rawDateOfBirth : '',
+      ),
       city: rawCity is String ? rawCity : '',
       aboutMe: details['about_me'] as String? ?? '',
       photoUrl: rawPhotoUrl is String ? rawPhotoUrl : null,
@@ -80,9 +80,11 @@ class DiscoveryProfile {
 
   static String _attributeLabel(String key) => key
       .split('_')
-      .map((part) => part.isEmpty
-          ? part
-          : '${part[0].toUpperCase()}${part.substring(1)}')
+      .map(
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
+      )
       .join(' ');
 }
 

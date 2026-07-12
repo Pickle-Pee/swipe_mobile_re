@@ -15,14 +15,12 @@ class DioDiscoveryRepository implements DiscoveryRepository {
 
   @override
   Future<List<DiscoveryProfile>> getProfiles() async {
-    final response =
-        await _apiClient.get<List<dynamic>>('/match/find_matches');
+    final response = await _apiClient.get<List<dynamic>>('/match/find_matches');
     final matches = response.data ?? const [];
     return Future.wait(
       matches.whereType<Map<String, dynamic>>().map((match) async {
         final id = match['user_id'] as int;
-        final details =
-            await _apiClient.get<Map<String, dynamic>>('/user/$id');
+        final details = await _apiClient.get<Map<String, dynamic>>('/user/$id');
         return DiscoveryProfile.fromJson(match, details.data ?? const {});
       }),
     );

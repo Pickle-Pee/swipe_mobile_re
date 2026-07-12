@@ -26,6 +26,15 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<DiscoveryState>(discoveryControllerProvider, (previous, next) {
+      final matched = next.matchedProfile;
+      if (matched != null && previous?.matchedProfile == null) {
+        ref.read(discoveryControllerProvider.notifier).consumeMatch();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showMatch(matched);
+        });
+      }
+    });
     final state = ref.watch(discoveryControllerProvider);
     final profile = state.current;
     return Scaffold(
@@ -151,6 +160,44 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
   void _like() => ref.read(discoveryControllerProvider.notifier).like();
   void _pass() => ref.read(discoveryControllerProvider.notifier).pass();
 
+  Future<void> _showMatch(DiscoveryProfile profile) async {
+    final write = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("It's a match!"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 46,
+              backgroundImage: profile.photoUrl == null
+                  ? null
+                  : NetworkImage(_mediaUrl(profile.photoUrl!)),
+              child: profile.photoUrl == null
+                  ? const Icon(Icons.person, size: 48)
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            Text(profile.firstName, style: const TextStyle(fontSize: 20)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continue'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Write'),
+          ),
+        ],
+      ),
+    );
+    if (write == true && mounted) {
+      context.go('${Routes.chats}?userId=${profile.id}');
+    }
+  }
+
   String _errorMessage(Object? error) => error is ApiException
       ? error.message
       : 'Could not complete the request. Please try again.';
@@ -178,11 +225,11 @@ class _ProfileCard extends StatelessWidget {
                 : Image.network(
                     _mediaUrl(profile.photoUrl!),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const DecoratedBox(
-                      decoration:
-                          BoxDecoration(gradient: AppTokens.coolGradient),
-                      child:
-                          Icon(Icons.broken_image_outlined, size: 64),
+                    errorBuilder: (_, _, _) => const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppTokens.coolGradient,
+                      ),
+                      child: Icon(Icons.broken_image_outlined, size: 64),
                     ),
                   ),
           ),
@@ -245,40 +292,41 @@ class _MessageState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onPressed, child: Text(button)),
-          ],
-        ),
-      );
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(message, textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        TextButton(onPressed: onPressed, child: Text(button)),
+      ],
+    ),
+  );
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.label, required this.icon, required this.onTap});
+  const _NavItem({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
   final String label;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppTokens.textSecondary),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppTokens.textSecondary,
-              ),
-            ),
-          ],
+    onTap: onTap,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppTokens.textSecondary),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: AppTokens.textSecondary),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 String _mediaUrl(String value) {

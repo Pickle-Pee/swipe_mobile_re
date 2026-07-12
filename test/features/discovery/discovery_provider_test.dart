@@ -34,7 +34,33 @@ void main() {
     expect(state.current?.id, profile.id);
   });
 
-  test('double reaction starts one request and advances after success', () async {
+  test(
+    'double reaction starts one request and advances after success',
+    () async {
+      final repository = FakeDiscoveryRepository([profile]);
+      final container = ProviderContainer(
+        overrides: [discoveryRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(discoveryControllerProvider.notifier);
+      await controller.load();
+
+      final first = controller.pass();
+      final second = controller.pass();
+      expect(repository.reactionCalls, 1);
+      repository.reactionCompleter.complete(
+        const DiscoveryReactionResult(isMatch: false),
+      );
+      await Future.wait([first, second]);
+
+      expect(
+        container.read(discoveryControllerProvider).status,
+        DiscoveryStatus.empty,
+      );
+    },
+  );
+
+  test('mutual like exposes the matched profile once', () async {
     final repository = FakeDiscoveryRepository([profile]);
     final container = ProviderContainer(
       overrides: [discoveryRepositoryProvider.overrideWithValue(repository)],
@@ -43,16 +69,15 @@ void main() {
     final controller = container.read(discoveryControllerProvider.notifier);
     await controller.load();
 
-    final first = controller.pass();
-    final second = controller.pass();
-    expect(repository.reactionCalls, 1);
+    final request = controller.like();
     repository.reactionCompleter.complete(
-      const DiscoveryReactionResult(isMatch: false),
+      const DiscoveryReactionResult(isMatch: true),
     );
-    await Future.wait([first, second]);
+    await request;
 
-    expect(container.read(discoveryControllerProvider).status,
-        DiscoveryStatus.empty);
+    expect(container.read(discoveryControllerProvider).matchedProfile?.id, 1);
+    controller.consumeMatch();
+    expect(container.read(discoveryControllerProvider).matchedProfile, isNull);
   });
 }
 
