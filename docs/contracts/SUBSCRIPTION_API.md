@@ -86,6 +86,14 @@ Unknown/malformed values fail visibly. Display price derives from minor units an
 
 ## Compatibility and environments
 
+`POST /subscriptions/init_payment` удалён из платёжного контракта. В течение одного переходного backend-релиза route помечен deprecated и всегда отвечает `410 Gone`:
+
+```json
+{"detail":{"code":"LEGACY_PAYMENT_ENDPOINT_REMOVED","message":"Use POST /subscriptions/checkout"}}
+```
+
+Ответ не зависит от Authorization или body; endpoint не читает клиентские `orderId/amount/customerKey/phone`, не пишет в БД и не вызывает банк. Клиент не должен вызывать или повторять этот endpoint: единственная замена — `POST /subscriptions/checkout` только с `subscription_id` и `Idempotency-Key`. После переходного релиза legacy route удаляется полностью.
+
 Replace legacy `price/duration/features` with `price_minor/duration_days/description` after backend deployment. Remove client `orderId/amount/customerKey/phone`; never call nonexistent `activate_subscription`. Migrate legacy singleton/MethodChannel to repository on shared `ApiClient` and Riverpod. `/premium` currently has no auth guard.
 
 Demo uses backend fake provider and same DTO/state path, with visible label; test DEMO terminal and production secrets remain backend-only. Production forbids demo/local URLs. Automatic recurring Charge is outside this stage; `renewable` is metadata until a separate approved task.
