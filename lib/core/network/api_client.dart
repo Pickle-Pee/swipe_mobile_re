@@ -83,6 +83,7 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   }) async {
     try {
       return await dio.request<T>(
@@ -91,6 +92,7 @@ class ApiClient {
         queryParameters: queryParameters,
         options: (options ?? Options()).copyWith(method: method),
         cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
       );
     } on DioException catch (error) {
       throw _mapException(error);
@@ -116,6 +118,7 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   }) =>
       request<T>(
         path,
@@ -124,6 +127,7 @@ class ApiClient {
         queryParameters: queryParameters,
         options: options,
         cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
       );
 
   Future<bool> refreshSession() => _refreshOnce();
