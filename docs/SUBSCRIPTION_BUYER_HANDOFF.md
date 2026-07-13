@@ -77,7 +77,7 @@ Dart defines видны внутри приложения и не подходя
 - Не создавать WebView или собственную форму карты; используется банковская форма во внешнем приложении.
 - Не считать цену из UI авторитетной и не отправлять её в checkout.
 - Legacy network-код проекта содержит `print(response.data)` вне subscription-модуля, включая auth refresh response; перед production release его нужно удалить или перевести на redacted logger.
-- Неиспользуемые legacy `SubscriptionHttp`, `PaymentService` и `SubscriptionServices` всё ещё содержат старый вызов `/subscriptions/init_payment`. Backend REM-03 безопасно отвечает на него `410 Gone` без чтения body, БД и банка, но до non-demo release эти Flutter-классы всё равно нужно удалить после проверки потребителей. Канонический клиент вызывает только server-priced `/subscriptions/checkout`.
+- REM-04 удалила неиспользуемые legacy network/service/MethodChannel классы и старые DTO после подтверждения отсутствия runtime-потребителей. Канонический клиент использует только shared `ApiClient`, Riverpod controller и server-priced `/subscriptions/checkout`.
 
 ## Проверки
 
@@ -110,4 +110,4 @@ flutter build apk --debug
 
 ## Готовность
 
-Канонический Flutter subscription flow готов для demo. Backend scheduler/init blockers закрыты REM-01/REM-03; legacy init временно сохранён только как deprecated `410` guard. Non-demo запуск всё ещё заблокирован до удаления legacy Flutter init client/logging. После этого покупатель должен предоставить production HTTPS endpoints, завершить банковский checklist и настроить Android release signing. Банковские secrets в мобильную сборку добавлять не требуется и запрещено.
+Канонический Flutter subscription flow готов для demo. Backend scheduler/init blockers закрыты REM-01/REM-03, а Flutter legacy payment flow удалён REM-04. Non-demo запуск всё ещё заблокирован до закрытия оставшегося legacy Flutter logging. После этого покупатель должен предоставить production HTTPS endpoints, завершить банковский checklist и настроить Android release signing. Банковские secrets в мобильную сборку добавлять не требуется и запрещено.

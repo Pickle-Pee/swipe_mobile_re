@@ -40,6 +40,17 @@ void main() {
     );
     expect(checkout.data, {'subscription_id': 1});
     expect(checkout.headers['Idempotency-Key'], 'key-1');
+    expect(
+      requests.map((request) => request.path).toSet(),
+      {
+        '/subscriptions',
+        '/subscriptions/active',
+        '/subscriptions/checkout',
+        '/subscriptions/payments/order-1',
+        '/subscriptions/cancel',
+      },
+    );
+    expect(requests.every((request) => request.uri.host == 'api.test'), isTrue);
   });
 
   test('rejects malformed list', () async {
