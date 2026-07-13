@@ -328,10 +328,7 @@ class UserHttp {
 
   Future<int> updateFcmToken(String token) async {
     try {
-      Response response = await dio.post(
-        "/communication/update_fcm_token",
-        data: {"token": token},
-      );
+      await dio.post("/communication/update_fcm_token", data: {"token": token});
       return 0;
     } catch (e) {
       print("Ошибка при отправке FCM-токена на сервер: $e");
@@ -400,7 +397,7 @@ class UserHttp {
         print("Unexpected status code: ${response.statusCode}");
         return -1;
       }
-    } on DioException catch (e) {
+    } on DioException {
       return -1;
     } catch (e) {
       print("Error updating user info: $e");

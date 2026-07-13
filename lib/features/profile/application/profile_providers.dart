@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/network/api_client.dart';
 import '../../auth/application/auth_providers.dart';
 import '../domain/profile_models.dart';
 import '../domain/profile_repository.dart';
@@ -28,7 +27,7 @@ abstract interface class ProfilePhotoPicker {
 
 class ImagePickerProfilePhotoPicker implements ProfilePhotoPicker {
   ImagePickerProfilePhotoPicker([ImagePicker? picker])
-      : _picker = picker ?? ImagePicker();
+    : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
 
@@ -60,14 +59,10 @@ class ProfileController extends Notifier<ProfileState> {
   ProfileRepository get _repository => ref.read(profileRepositoryProvider);
 
   @override
-  ProfileState build() =>
-      const ProfileState(status: ProfileStatus.loading);
+  ProfileState build() => const ProfileState(status: ProfileStatus.loading);
 
   Future<void> load() async {
-    state = ProfileState(
-      status: ProfileStatus.loading,
-      profile: state.profile,
-    );
+    state = ProfileState(status: ProfileStatus.loading, profile: state.profile);
     try {
       _setProfile(await _repository.getCurrentProfile());
     } on Object catch (error) {
@@ -95,8 +90,7 @@ class ProfileController extends Notifier<ProfileState> {
 
   Future<void> pickAndUploadPhoto() async {
     try {
-      final file =
-          await ref.read(profilePhotoPickerProvider).pickFromGallery();
+      final file = await ref.read(profilePhotoPickerProvider).pickFromGallery();
       if (file == null) return;
       state = ProfileState(
         status: state.status,
@@ -139,7 +133,8 @@ class ProfileController extends Notifier<ProfileState> {
   }
 
   void _setProfile(UserProfile profile) {
-    final empty = profile.firstName.isEmpty &&
+    final empty =
+        profile.firstName.isEmpty &&
         profile.city.isEmpty &&
         profile.aboutMe.isEmpty &&
         profile.interests.isEmpty &&

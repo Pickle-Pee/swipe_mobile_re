@@ -98,9 +98,7 @@ class MatchesHttp {
 
   Future<int> addFavorite(int userId) async {
     try {
-      Response response = await dio.post(
-        "${AppConfig.baseAppUrl}/likes/add_to_favorites/$userId",
-      );
+      await dio.post("${AppConfig.baseAppUrl}/likes/add_to_favorites/$userId");
       return 0;
     } catch (e) {
       return -1;
@@ -109,7 +107,7 @@ class MatchesHttp {
 
   Future<int> deleteFavorite(int userId) async {
     try {
-      Response response = await dio.delete(
+      await dio.delete(
         "${AppConfig.baseAppUrl}/likes/remove_from_favorites/$userId",
       );
       return 0;

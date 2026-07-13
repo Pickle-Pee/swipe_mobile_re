@@ -12,10 +12,15 @@ abstract class _ChatInfo with Store {
   _ChatInfo({
     required this.chatId,
     required this.user,
+    // Forwarded through the public MobX class-alias constructor.
+    // ignore: unused_element_parameter
     this.createdAt,
+    // ignore: unused_element_parameter
     this.lastMessage,
     List<Message>? messages,
+    // ignore: unused_element_parameter
     this.unreadCount = 0,
+    // ignore: unused_element_parameter
     this.isHidden = false, // Новое свойство
   }) : messages = ObservableList<Message>.of(messages ?? []);
 
