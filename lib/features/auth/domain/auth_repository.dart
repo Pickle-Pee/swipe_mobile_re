@@ -19,8 +19,8 @@ class DioAuthRepository implements AuthRepository {
   DioAuthRepository({
     required ApiClient apiClient,
     required SessionStorage storage,
-  })  : _apiClient = apiClient,
-        _storage = storage;
+  }) : _apiClient = apiClient,
+       _storage = storage;
 
   final ApiClient _apiClient;
   final SessionStorage _storage;
@@ -93,8 +93,7 @@ class DioAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> whoAmI() async {
-    final response =
-        await _apiClient.get<Map<String, dynamic>>('/auth/whoami');
+    final response = await _apiClient.get<Map<String, dynamic>>('/auth/whoami');
     final data = response.data;
     if (data == null) {
       throw const FormatException('Empty whoami response');

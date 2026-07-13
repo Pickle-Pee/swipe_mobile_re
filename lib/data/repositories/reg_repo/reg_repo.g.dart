@@ -99,13 +99,16 @@ mixin _$RegRepo on _RegRepo, Store {
     });
   }
 
-  late final _$_RegRepoActionController =
-      ActionController(name: '_RegRepo', context: context);
+  late final _$_RegRepoActionController = ActionController(
+    name: '_RegRepo',
+    context: context,
+  );
 
   @override
   void updateName(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateName');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateName',
+    );
     try {
       return super.updateName(updatedValue);
     } finally {
@@ -115,8 +118,9 @@ mixin _$RegRepo on _RegRepo, Store {
 
   @override
   void updateSurname(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateSurname');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateSurname',
+    );
     try {
       return super.updateSurname(updatedValue);
     } finally {
@@ -126,8 +130,9 @@ mixin _$RegRepo on _RegRepo, Store {
 
   @override
   void updateBirth(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateBirth');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateBirth',
+    );
     try {
       return super.updateBirth(updatedValue);
     } finally {
@@ -137,8 +142,9 @@ mixin _$RegRepo on _RegRepo, Store {
 
   @override
   void updateGender(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateGender');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateGender',
+    );
     try {
       return super.updateGender(updatedValue);
     } finally {
@@ -148,8 +154,9 @@ mixin _$RegRepo on _RegRepo, Store {
 
   @override
   void updateNumber(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateNumber');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateNumber',
+    );
     try {
       return super.updateNumber(updatedValue);
     } finally {
@@ -159,8 +166,9 @@ mixin _$RegRepo on _RegRepo, Store {
 
   @override
   void updateCity(String updatedValue) {
-    final _$actionInfo =
-        _$_RegRepoActionController.startAction(name: '_RegRepo.updateCity');
+    final _$actionInfo = _$_RegRepoActionController.startAction(
+      name: '_RegRepo.updateCity',
+    );
     try {
       return super.updateCity(updatedValue);
     } finally {

@@ -15,11 +15,7 @@ void main() {
   DioAuthRepository createRepository(MockHandler handler) {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
       ..httpClientAdapter = MockHttpAdapter(handler);
-    final client = ApiClient(
-      dio: dio,
-      tokenStore: storage,
-      logSink: (_) {},
-    );
+    final client = ApiClient(dio: dio, tokenStore: storage, logSink: (_) {});
     return DioAuthRepository(apiClient: client, storage: storage);
   }
 
@@ -61,8 +57,9 @@ void main() {
       return jsonResponse(200, {'verification_code': '000000'});
     });
 
-    final response =
-        await repository.sendCode(const SendCodeRequest('79990000000'));
+    final response = await repository.sendCode(
+      const SendCodeRequest('79990000000'),
+    );
 
     expect(response.demoVerificationCode, '000000');
   });
@@ -156,8 +153,7 @@ class MockHttpAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) =>
-      _handler(options);
+  ) => _handler(options);
 
   @override
   void close({bool force = false}) {}

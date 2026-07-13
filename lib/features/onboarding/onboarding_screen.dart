@@ -25,13 +25,20 @@ class OnboardingScreen extends StatelessWidget {
                   gradient: AppTokens.ctaGradient,
                   boxShadow: AppTokens.glowShadow(),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 54),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 54,
+                ),
               ),
               const SizedBox(height: 24),
               const PillTag(label: 'AI-powered connection'),
               const SizedBox(height: 24),
-              Text('Welcome to emotional\nintelligence',
-                  textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge),
+              Text(
+                'Welcome to emotional\nintelligence',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'An AI-native experience designed to understand who you are and help you find meaningful connections.',

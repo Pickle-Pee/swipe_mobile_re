@@ -17,16 +17,12 @@ class RegistrationArguments {
 }
 
 class RegistrationScreen extends ConsumerStatefulWidget {
-  const RegistrationScreen({
-    super.key,
-    required this.phoneNumber,
-  });
+  const RegistrationScreen({super.key, required this.phoneNumber});
 
   final String phoneNumber;
 
   @override
-  ConsumerState<RegistrationScreen> createState() =>
-      _RegistrationScreenState();
+  ConsumerState<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
 class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
@@ -98,7 +94,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       _isSubmitting = true;
       _error = null;
     });
-    await ref.read(authControllerProvider.notifier).register(
+    await ref
+        .read(authControllerProvider.notifier)
+        .register(
           RegisterRequest(
             phoneNumber: widget.phoneNumber,
             firstName: _firstName.text.trim(),
@@ -178,8 +176,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   label: _isSubmitting
                       ? 'Creating profile…'
                       : step == 4
-                          ? 'Continue to discovery'
-                          : 'Next',
+                      ? 'Continue to discovery'
+                      : 'Next',
                   onPressed: _isSubmitting || !canGoNext ? () {} : _continue,
                 ),
               ),
@@ -234,20 +232,21 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           child: Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: const {
-              'Woman': 'female',
-              'Man': 'male',
-              'Non-binary': 'non-binary',
-            }.entries
-                .map(
-                  (entry) => ChoiceChip(
-                    label: Text(entry.key),
-                    selected: _selectedGender == entry.value,
-                    onSelected: (_) =>
-                        setState(() => _selectedGender = entry.value),
-                  ),
-                )
-                .toList(),
+            children:
+                const {
+                      'Woman': 'female',
+                      'Man': 'male',
+                      'Non-binary': 'non-binary',
+                    }.entries
+                    .map(
+                      (entry) => ChoiceChip(
+                        label: Text(entry.key),
+                        selected: _selectedGender == entry.value,
+                        onSelected: (_) =>
+                            setState(() => _selectedGender = entry.value),
+                      ),
+                    )
+                    .toList(),
           ),
         );
       case 3:

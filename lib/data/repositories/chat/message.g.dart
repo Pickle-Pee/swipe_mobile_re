@@ -54,8 +54,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$recipientIdAtom =
-      Atom(name: '_Message.recipientId', context: context);
+  late final _$recipientIdAtom = Atom(
+    name: '_Message.recipientId',
+    context: context,
+  );
 
   @override
   int? get recipientId {
@@ -100,8 +102,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$replyMessageIdAtom =
-      Atom(name: '_Message.replyMessageId', context: context);
+  late final _$replyMessageIdAtom = Atom(
+    name: '_Message.replyMessageId',
+    context: context,
+  );
 
   @override
   int? get replyMessageId {
@@ -116,8 +120,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$voiceDataAtom =
-      Atom(name: '_Message.voiceData', context: context);
+  late final _$voiceDataAtom = Atom(
+    name: '_Message.voiceData',
+    context: context,
+  );
 
   @override
   String? get voiceData {
@@ -147,8 +153,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$createdAtAtom =
-      Atom(name: '_Message.createdAt', context: context);
+  late final _$createdAtAtom = Atom(
+    name: '_Message.createdAt',
+    context: context,
+  );
 
   @override
   DateTime? get createdAt {
@@ -163,8 +171,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$deliveredAtAtom =
-      Atom(name: '_Message.deliveredAt', context: context);
+  late final _$deliveredAtAtom = Atom(
+    name: '_Message.deliveredAt',
+    context: context,
+  );
 
   @override
   DateTime? get deliveredAt {
@@ -194,8 +204,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$messageTypeAtom =
-      Atom(name: '_Message.messageType', context: context);
+  late final _$messageTypeAtom = Atom(
+    name: '_Message.messageType',
+    context: context,
+  );
 
   @override
   String get messageType {
@@ -210,8 +222,10 @@ mixin _$Message on _Message, Store {
     });
   }
 
-  late final _$mediaUrlsAtom =
-      Atom(name: '_Message.mediaUrls', context: context);
+  late final _$mediaUrlsAtom = Atom(
+    name: '_Message.mediaUrls',
+    context: context,
+  );
 
   @override
   ObservableList<String>? get mediaUrls {

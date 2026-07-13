@@ -1,10 +1,4 @@
-enum ApiExceptionType {
-  network,
-  validation,
-  unauthorized,
-  server,
-  unknown,
-}
+enum ApiExceptionType { network, validation, unauthorized, server, unknown }
 
 class ApiException implements Exception {
   const ApiException({
@@ -25,7 +19,7 @@ class ApiException implements Exception {
 
 class NetworkApiException extends ApiException {
   const NetworkApiException({required super.message, super.details})
-      : super(type: ApiExceptionType.network);
+    : super(type: ApiExceptionType.network);
 }
 
 class ValidationApiException extends ApiException {

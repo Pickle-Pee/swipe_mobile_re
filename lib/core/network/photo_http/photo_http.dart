@@ -69,7 +69,8 @@ class PhotoHttp {
   ) async {
     try {
       // Формирование строки запроса с параметрами
-      String url = "${AppConfig.baseAppUrl}/service/upload/profile_photo?"
+      String url =
+          "${AppConfig.baseAppUrl}/service/upload/profile_photo?"
           "is_avatar=$isAvatar"
           "&scale=${scale.toString()}"
           "&position_x=${positionX.toString()}"

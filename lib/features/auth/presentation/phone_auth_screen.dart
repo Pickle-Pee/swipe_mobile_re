@@ -72,9 +72,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
       if (!mounted) return;
       setState(() {
         _step = _AuthStep.code;
-        _demoCode = AppConfig.isDemoMode
-            ? response.demoVerificationCode
-            : null;
+        _demoCode = AppConfig.isDemoMode ? response.demoVerificationCode : null;
       });
       _startResendTimer();
     } on Object catch (error) {
@@ -114,11 +112,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
         return;
       }
 
-      await ref.read(authControllerProvider.notifier).login(
-            LoginRequest(
-              phoneNumber: _phoneNumber,
-              code: _codeController.text,
-            ),
+      await ref
+          .read(authControllerProvider.notifier)
+          .login(
+            LoginRequest(phoneNumber: _phoneNumber, code: _codeController.text),
           );
       if (!mounted) return;
       final authState = ref.read(authControllerProvider);
@@ -185,8 +182,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
               const SizedBox(height: 24),
               GlassSurface(
                 child: TextField(
-                  controller:
-                      isCodeStep ? _codeController : _phoneController,
+                  controller: isCodeStep ? _codeController : _phoneController,
                   enabled: !_isSubmitting,
                   keyboardType: isCodeStep
                       ? TextInputType.number
@@ -196,9 +192,7 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                   decoration: InputDecoration(
                     hintText: isCodeStep ? '000000' : '79991234567',
                     prefixIcon: Icon(
-                      isCodeStep
-                          ? Icons.sms_outlined
-                          : Icons.phone_outlined,
+                      isCodeStep ? Icons.sms_outlined : Icons.phone_outlined,
                     ),
                     counterText: '',
                   ),
@@ -235,13 +229,13 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                   label: _isSubmitting
                       ? 'Please wait…'
                       : isCodeStep
-                          ? 'Confirm code'
-                          : 'Send code',
+                      ? 'Confirm code'
+                      : 'Send code',
                   onPressed: _isSubmitting
                       ? () {}
                       : isCodeStep
-                          ? _confirmCode
-                          : _sendCode,
+                      ? _confirmCode
+                      : _sendCode,
                 ),
               ),
             ],

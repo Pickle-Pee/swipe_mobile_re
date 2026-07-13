@@ -39,23 +39,28 @@ void main() {
     },
   );
 
-  test('logout clears repository session and publishes unauthenticated', () async {
-    final repository = FakeAuthRepository(restoredUser: const AuthUser(id: 3));
-    final container = ProviderContainer(
-      overrides: [authRepositoryProvider.overrideWithValue(repository)],
-    );
-    addTearDown(container.dispose);
-    final controller = container.read(authControllerProvider.notifier);
-    await controller.restoreSession();
+  test(
+    'logout clears repository session and publishes unauthenticated',
+    () async {
+      final repository = FakeAuthRepository(
+        restoredUser: const AuthUser(id: 3),
+      );
+      final container = ProviderContainer(
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(authControllerProvider.notifier);
+      await controller.restoreSession();
 
-    await controller.logout();
+      await controller.logout();
 
-    expect(repository.logoutCalled, isTrue);
-    expect(
-      container.read(authControllerProvider).status,
-      AuthStatus.unauthenticated,
-    );
-  });
+      expect(repository.logoutCalled, isTrue);
+      expect(
+        container.read(authControllerProvider).status,
+        AuthStatus.unauthenticated,
+      );
+    },
+  );
 }
 
 class FakeAuthRepository implements AuthRepository {

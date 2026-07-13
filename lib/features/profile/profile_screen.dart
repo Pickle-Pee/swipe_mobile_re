@@ -162,18 +162,18 @@ class _ProfileHeader extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 38,
-            backgroundImage:
-                avatar == null ? null : NetworkImage(_photoUrl(avatar.url)),
-            child: avatar == null
-                ? const Icon(Icons.person, size: 40)
-                : null,
+            backgroundImage: avatar == null
+                ? null
+                : NetworkImage(_photoUrl(avatar.url)),
+            child: avatar == null ? const Icon(Icons.person, size: 40) : null,
           ),
           const SizedBox(height: 10),
           Text(
             [
-              [profile.firstName, profile.lastName]
-                  .where((part) => part.isNotEmpty)
-                  .join(' '),
+              [
+                profile.firstName,
+                profile.lastName,
+              ].where((part) => part.isNotEmpty).join(' '),
               if (age != null) '$age',
             ].where((part) => part.isNotEmpty).join(', '),
             style: const TextStyle(color: Colors.white, fontSize: 20),
@@ -181,12 +181,16 @@ class _ProfileHeader extends StatelessWidget {
           const SizedBox(height: 6),
           Text(profile.city.isEmpty ? 'City not specified' : profile.city),
           const SizedBox(height: 6),
-          Text(profile.aboutMe.isEmpty ? 'No description yet' : profile.aboutMe),
+          Text(
+            profile.aboutMe.isEmpty ? 'No description yet' : profile.aboutMe,
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: [
-              PillTag(label: profile.status.isEmpty ? 'offline' : profile.status),
+              PillTag(
+                label: profile.status.isEmpty ? 'offline' : profile.status,
+              ),
               PillTag(
                 label: profile.isSubscription ? 'Premium' : 'Free plan',
                 color: AppTokens.pinkSoft,
@@ -228,7 +232,8 @@ class _PhotoSection extends StatelessWidget {
               ),
             ],
           ),
-          if (uploadProgress != null) LinearProgressIndicator(value: uploadProgress),
+          if (uploadProgress != null)
+            LinearProgressIndicator(value: uploadProgress),
           if (profile.photos.isEmpty)
             const Text('No photos yet')
           else
@@ -238,7 +243,9 @@ class _PhotoSection extends StatelessWidget {
               children: profile.photos
                   .map(
                     (photo) => GestureDetector(
-                      onTap: photo.isAvatar ? null : () => onSetAvatar(photo.id),
+                      onTap: photo.isAvatar
+                          ? null
+                          : () => onSetAvatar(photo.id),
                       child: Stack(
                         children: [
                           ClipRRect(
@@ -308,11 +315,11 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          _InlineError(error: error),
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
-        ],
-      );
+    children: [
+      _InlineError(error: error),
+      TextButton(onPressed: onRetry, child: const Text('Try again')),
+    ],
+  );
 }
 
 class _InlineError extends StatelessWidget {
@@ -321,13 +328,13 @@ class _InlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        error is ApiException
-            ? (error! as ApiException).message
-            : error is InvalidProfilePhotoException
-                ? (error! as InvalidProfilePhotoException).message
-                : 'Could not update the profile. Please try again.',
-        style: TextStyle(color: Theme.of(context).colorScheme.error),
-      );
+    error is ApiException
+        ? (error! as ApiException).message
+        : error is InvalidProfilePhotoException
+        ? (error! as InvalidProfilePhotoException).message
+        : 'Could not update the profile. Please try again.',
+    style: TextStyle(color: Theme.of(context).colorScheme.error),
+  );
 }
 
 class _EmptyState extends StatelessWidget {
@@ -336,11 +343,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          const Text('Profile data is empty'),
-          TextButton(onPressed: onRetry, child: const Text('Reload')),
-        ],
-      );
+    children: [
+      const Text('Profile data is empty'),
+      TextButton(onPressed: onRetry, child: const Text('Reload')),
+    ],
+  );
 }
 
 String _photoUrl(String value) {

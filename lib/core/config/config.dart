@@ -8,7 +8,11 @@ enum AppEnvironment {
       'demo' => AppEnvironment.demo,
       'development' || 'dev' => AppEnvironment.development,
       'production' || 'prod' => AppEnvironment.production,
-      _ => throw ArgumentError.value(value, 'APP_ENV', 'Unsupported environment'),
+      _ => throw ArgumentError.value(
+        value,
+        'APP_ENV',
+        'Unsupported environment',
+      ),
     };
   }
 }
@@ -34,8 +38,8 @@ class EnvironmentConfig {
   }) {
     final parsedEnvironment = AppEnvironment.parse(environment);
     final defaultUrl = switch (parsedEnvironment) {
-      AppEnvironment.demo || AppEnvironment.development =>
-        'http://10.0.2.2:8000',
+      AppEnvironment.demo ||
+      AppEnvironment.development => 'http://10.0.2.2:8000',
       AppEnvironment.production => '',
     };
     final resolvedRestUrl = _normalizeUrl(
@@ -83,7 +87,11 @@ class EnvironmentConfig {
     return switch (value.trim().toLowerCase()) {
       'true' => true,
       'false' => false,
-      _ => throw ArgumentError.value(value, 'DEMO_MODE', 'Expected true or false'),
+      _ => throw ArgumentError.value(
+        value,
+        'DEMO_MODE',
+        'Expected true or false',
+      ),
     };
   }
 

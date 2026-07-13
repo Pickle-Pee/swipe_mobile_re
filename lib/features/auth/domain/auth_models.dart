@@ -19,10 +19,7 @@ class SendCodeResponse {
   }
 }
 
-enum AccountStatus {
-  newUser,
-  existingUser,
-}
+enum AccountStatus { newUser, existingUser }
 
 class CheckCodeRequest {
   const CheckCodeRequest({
@@ -34,9 +31,9 @@ class CheckCodeRequest {
   final String verificationCode;
 
   Map<String, dynamic> toQueryParameters() => {
-        'phone_number': phoneNumber,
-        'verification_code': verificationCode,
-      };
+    'phone_number': phoneNumber,
+    'verification_code': verificationCode,
+  };
 }
 
 class LoginRequest {
@@ -46,9 +43,9 @@ class LoginRequest {
   final String code;
 
   Map<String, dynamic> toQueryParameters() => {
-        'phone_number': phoneNumber,
-        'code': code,
-      };
+    'phone_number': phoneNumber,
+    'code': code,
+  };
 }
 
 class RegisterRequest {
@@ -71,14 +68,14 @@ class RegisterRequest {
   final Map<String, dynamic> additionalFields;
 
   Map<String, dynamic> toJson() => {
-        ...additionalFields,
-        'phone_number': phoneNumber,
-        'first_name': firstName,
-        'last_name': lastName,
-        'date_of_birth': dateOfBirth,
-        'gender': gender,
-        'city_name': cityName,
-      };
+    ...additionalFields,
+    'phone_number': phoneNumber,
+    'first_name': firstName,
+    'last_name': lastName,
+    'date_of_birth': dateOfBirth,
+    'gender': gender,
+    'city_name': cityName,
+  };
 }
 
 class AuthSession {
@@ -96,10 +93,7 @@ class AuthSession {
         refreshToken.isEmpty) {
       throw const FormatException('Authentication response has no tokens');
     }
-    return AuthSession(
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    );
+    return AuthSession(accessToken: accessToken, refreshToken: refreshToken);
   }
 }
 

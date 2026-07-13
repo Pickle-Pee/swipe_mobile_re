@@ -70,17 +70,17 @@ class UserProfile {
   }
 
   UserProfile withPhotos(List<ProfilePhoto> value) => UserProfile(
-        id: id,
-        firstName: firstName,
-        lastName: lastName,
-        dateOfBirth: dateOfBirth,
-        city: city,
-        aboutMe: aboutMe,
-        status: status,
-        isSubscription: isSubscription,
-        interests: interests,
-        photos: value,
-      );
+    id: id,
+    firstName: firstName,
+    lastName: lastName,
+    dateOfBirth: dateOfBirth,
+    city: city,
+    aboutMe: aboutMe,
+    status: status,
+    isSubscription: isSubscription,
+    interests: interests,
+    photos: value,
+  );
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     final interests = json['interests'] as List<dynamic>? ?? const [];
@@ -114,10 +114,10 @@ class ProfileUpdate {
   final String aboutMe;
 
   Map<String, dynamic> toJson() => {
-        'first_name': firstName,
-        'city_name': city,
-        'about_me': aboutMe,
-      };
+    'first_name': firstName,
+    'city_name': city,
+    'about_me': aboutMe,
+  };
 }
 
 class ProfilePhotoFile {

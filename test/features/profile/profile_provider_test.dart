@@ -5,18 +5,26 @@ import 'package:swipe_mobile_re/features/profile/domain/profile_models.dart';
 import 'package:swipe_mobile_re/features/profile/domain/profile_repository.dart';
 
 void main() {
-  test('network failure publishes error without throwing from controller', () async {
-    final container = ProviderContainer(
-      overrides: [
-        profileRepositoryProvider.overrideWithValue(FailingProfileRepository()),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'network failure publishes error without throwing from controller',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(
+            FailingProfileRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(profileControllerProvider.notifier).load();
+      await container.read(profileControllerProvider.notifier).load();
 
-    expect(container.read(profileControllerProvider).status, ProfileStatus.error);
-  });
+      expect(
+        container.read(profileControllerProvider).status,
+        ProfileStatus.error,
+      );
+    },
+  );
 }
 
 class FailingProfileRepository implements ProfileRepository {
@@ -36,6 +44,5 @@ class FailingProfileRepository implements ProfileRepository {
     ProfilePhotoFile file, {
     bool isAvatar = false,
     void Function(int, int)? onProgress,
-  }) =>
-      Future.error(Exception('offline'));
+  }) => Future.error(Exception('offline'));
 }

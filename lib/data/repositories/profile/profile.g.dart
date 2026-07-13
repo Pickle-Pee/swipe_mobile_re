@@ -9,8 +9,10 @@ part of 'profile.dart';
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
 mixin _$ProfileStore on _ProfileStore, Store {
-  late final _$userInfoAtom =
-      Atom(name: '_ProfileStore.userInfo', context: context);
+  late final _$userInfoAtom = Atom(
+    name: '_ProfileStore.userInfo',
+    context: context,
+  );
 
   @override
   UserInfo? get userInfo {
@@ -25,8 +27,10 @@ mixin _$ProfileStore on _ProfileStore, Store {
     });
   }
 
-  late final _$validDataAtom =
-      Atom(name: '_ProfileStore.validData', context: context);
+  late final _$validDataAtom = Atom(
+    name: '_ProfileStore.validData',
+    context: context,
+  );
 
   @override
   bool get validData {
@@ -41,8 +45,10 @@ mixin _$ProfileStore on _ProfileStore, Store {
     });
   }
 
-  late final _$photosAtom =
-      Atom(name: '_ProfileStore.photos', context: context);
+  late final _$photosAtom = Atom(
+    name: '_ProfileStore.photos',
+    context: context,
+  );
 
   @override
   ObservableList<Photo> get photos {
@@ -57,8 +63,10 @@ mixin _$ProfileStore on _ProfileStore, Store {
     });
   }
 
-  late final _$getMeInfoStatusAtom =
-      Atom(name: '_ProfileStore.getMeInfoStatus', context: context);
+  late final _$getMeInfoStatusAtom = Atom(
+    name: '_ProfileStore.getMeInfoStatus',
+    context: context,
+  );
 
   @override
   int get getMeInfoStatus {
@@ -73,29 +81,36 @@ mixin _$ProfileStore on _ProfileStore, Store {
     });
   }
 
-  late final _$getMeInfoAsyncAction =
-      AsyncAction('_ProfileStore.getMeInfo', context: context);
+  late final _$getMeInfoAsyncAction = AsyncAction(
+    '_ProfileStore.getMeInfo',
+    context: context,
+  );
 
   @override
   Future<int> getMeInfo() {
     return _$getMeInfoAsyncAction.run(() => super.getMeInfo());
   }
 
-  late final _$getUserPhotoAsyncAction =
-      AsyncAction('_ProfileStore.getUserPhoto', context: context);
+  late final _$getUserPhotoAsyncAction = AsyncAction(
+    '_ProfileStore.getUserPhoto',
+    context: context,
+  );
 
   @override
   Future<void> getUserPhoto() {
     return _$getUserPhotoAsyncAction.run(() => super.getUserPhoto());
   }
 
-  late final _$_ProfileStoreActionController =
-      ActionController(name: '_ProfileStore', context: context);
+  late final _$_ProfileStoreActionController = ActionController(
+    name: '_ProfileStore',
+    context: context,
+  );
 
   @override
   void updateValidData(bool updateValue) {
     final _$actionInfo = _$_ProfileStoreActionController.startAction(
-        name: '_ProfileStore.updateValidData');
+      name: '_ProfileStore.updateValidData',
+    );
     try {
       return super.updateValidData(updateValue);
     } finally {
@@ -106,7 +121,8 @@ mixin _$ProfileStore on _ProfileStore, Store {
   @override
   void editMeInfo(UserInfo newUserInfo) {
     final _$actionInfo = _$_ProfileStoreActionController.startAction(
-        name: '_ProfileStore.editMeInfo');
+      name: '_ProfileStore.editMeInfo',
+    );
     try {
       return super.editMeInfo(newUserInfo);
     } finally {
@@ -117,7 +133,8 @@ mixin _$ProfileStore on _ProfileStore, Store {
   @override
   void editMeInterest(List<Interest> newUserInterest) {
     final _$actionInfo = _$_ProfileStoreActionController.startAction(
-        name: '_ProfileStore.editMeInterest');
+      name: '_ProfileStore.editMeInterest',
+    );
     try {
       return super.editMeInterest(newUserInterest);
     } finally {
@@ -128,7 +145,8 @@ mixin _$ProfileStore on _ProfileStore, Store {
   @override
   void clearRepository() {
     final _$actionInfo = _$_ProfileStoreActionController.startAction(
-        name: '_ProfileStore.clearRepository');
+      name: '_ProfileStore.clearRepository',
+    );
     try {
       return super.clearRepository();
     } finally {
