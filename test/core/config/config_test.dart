@@ -7,8 +7,8 @@ void main() {
       final config = EnvironmentConfig.resolve(environment: 'demo');
 
       expect(config.environment, AppEnvironment.demo);
-      expect(config.restApiUrl, 'http://10.0.2.2:8000');
-      expect(config.socketIoUrl, 'http://10.0.2.2:8000');
+      expect(config.restApiUrl, 'http://10.0.2.2:1024');
+      expect(config.socketIoUrl, 'http://10.0.2.2:1025');
       expect(config.demoMode, isTrue);
     });
 

@@ -37,7 +37,7 @@ All environment values are defined in `lib/core/config/config.dart` and supplied
 | `SOCKET_IO_URL` | Socket.IO base URL | Android emulator host for demo/development |
 | `DEMO_MODE` | Explicit `true`/`false` demo behavior | enabled only for demo |
 
-Demo and development default to `http://10.0.2.2:8000`, which reaches the host machine from an Android emulator. A physical device needs a reachable LAN address. Production has no endpoint defaults: both URLs must be supplied, must be absolute HTTP(S) URLs, and must not use a known local host. Demo mode is rejected in production.
+Demo and development default to `http://10.0.2.2:1024` for REST and `http://10.0.2.2:1025` for Socket.IO. The `10.0.2.2` address reaches the host machine from an Android emulator. A physical device needs reachable LAN addresses. Production has no endpoint defaults: both URLs must be supplied, must be absolute HTTP(S) URLs, and must not use a known local host. Demo mode is rejected in production.
 
 Dart defines are visible in the compiled application and must never contain secrets.
 
@@ -48,8 +48,8 @@ flutter run --dart-define=APP_ENV=demo
 
 flutter run `
   --dart-define=APP_ENV=development `
-  --dart-define=REST_API_URL=http://10.0.2.2:8000 `
-  --dart-define=SOCKET_IO_URL=http://10.0.2.2:8000
+  --dart-define=REST_API_URL=http://10.0.2.2:1024 `
+  --dart-define=SOCKET_IO_URL=http://10.0.2.2:1025
 
 flutter run `
   --dart-define=APP_ENV=production `

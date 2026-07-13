@@ -24,7 +24,10 @@ class _AppState extends ConsumerState<App> {
     // Subscribe once at app start
     final nav = ref.read(navigationEventsProvider);
     final router = ref.read(appRouterProvider);
-    unawaited(ref.read(authControllerProvider.notifier).restoreSession());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(authControllerProvider.notifier).restoreSession());
+    });
     ref.read(chatSocketManagerProvider);
     ref.read(chatRealtimeProvider);
 

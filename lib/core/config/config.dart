@@ -37,17 +37,22 @@ class EnvironmentConfig {
     String demoMode = '',
   }) {
     final parsedEnvironment = AppEnvironment.parse(environment);
-    final defaultUrl = switch (parsedEnvironment) {
+    final defaultRestApiUrl = switch (parsedEnvironment) {
       AppEnvironment.demo ||
-      AppEnvironment.development => 'http://10.0.2.2:8000',
+      AppEnvironment.development => 'http://10.0.2.2:1024',
+      AppEnvironment.production => '',
+    };
+    final defaultSocketIoUrl = switch (parsedEnvironment) {
+      AppEnvironment.demo ||
+      AppEnvironment.development => 'http://10.0.2.2:1025',
       AppEnvironment.production => '',
     };
     final resolvedRestUrl = _normalizeUrl(
-      restApiUrl.isEmpty ? defaultUrl : restApiUrl,
+      restApiUrl.isEmpty ? defaultRestApiUrl : restApiUrl,
       'REST_API_URL',
     );
     final resolvedSocketUrl = _normalizeUrl(
-      socketIoUrl.isEmpty ? defaultUrl : socketIoUrl,
+      socketIoUrl.isEmpty ? defaultSocketIoUrl : socketIoUrl,
       'SOCKET_IO_URL',
     );
     final resolvedDemoMode = demoMode.isEmpty
