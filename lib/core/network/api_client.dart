@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
 import '../storage/token_storage.dart';
@@ -17,7 +16,7 @@ abstract interface class ApiTokenStore {
 
 class SecureApiTokenStore implements ApiTokenStore {
   SecureApiTokenStore([TokenStorage? storage])
-      : _storage = storage ?? TokenStorage();
+    : _storage = storage ?? TokenStorage();
 
   final TokenStorage _storage;
 
@@ -53,19 +52,20 @@ class ApiClient {
     Duration connectTimeout = const Duration(seconds: 5),
     Duration sendTimeout = const Duration(seconds: 5),
     Duration receiveTimeout = const Duration(seconds: 10),
-  })  : _tokenStore = tokenStore ?? SecureApiTokenStore(),
-        dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AppConfig.baseAppUrl,
-                connectTimeout: connectTimeout,
-                sendTimeout: sendTimeout,
-                receiveTimeout: receiveTimeout,
-              ),
-            ) {
+  }) : _tokenStore = tokenStore ?? SecureApiTokenStore(),
+       dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: AppConfig.baseAppUrl,
+               connectTimeout: connectTimeout,
+               sendTimeout: sendTimeout,
+               receiveTimeout: receiveTimeout,
+             ),
+           ) {
     this.dio.interceptors.add(_AuthInterceptor(this));
     this.dio.interceptors.add(
-      SafeApiLogInterceptor(logSink ?? debugPrint),
+      SafeApiLogInterceptor(logSink ?? SafeApiLogInterceptor.defaultSink),
     );
   }
 
@@ -104,13 +104,12 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
-  }) =>
-      request<T>(
-        path,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-      );
+  }) => request<T>(
+    path,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+  );
 
   Future<Response<T>> post<T>(
     String path, {
@@ -119,16 +118,15 @@ class ApiClient {
     Options? options,
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
-  }) =>
-      request<T>(
-        path,
-        method: 'POST',
-        data: data,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-        onSendProgress: onSendProgress,
-      );
+  }) => request<T>(
+    path,
+    method: 'POST',
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+    onSendProgress: onSendProgress,
+  );
 
   Future<bool> refreshSession() => _refreshOnce();
 
@@ -156,7 +154,8 @@ class ApiClient {
       return false;
     }
 
-    final refreshDio = Dio(dio.options)..httpClientAdapter = dio.httpClientAdapter;
+    final refreshDio = Dio(dio.options)
+      ..httpClientAdapter = dio.httpClientAdapter;
     try {
       final response = await refreshDio.post<Map<String, dynamic>>(
         refreshPath,
@@ -181,8 +180,8 @@ class ApiClient {
   Future<void> _clearSession() async {
     try {
       await _tokenStore.clear();
-    } on Object catch (error) {
-      debugPrint('Could not clear the local API session: $error');
+    } on Object {
+      SafeApiLogInterceptor.defaultSink('session clear failed');
     }
   }
 
@@ -194,16 +193,14 @@ class ApiClient {
   static ApiException _mapException(DioException error) {
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
-    final message = _messageFrom(responseData) ?? error.message ?? 'Request failed';
+    final message =
+        _messageFrom(responseData) ?? error.message ?? 'Request failed';
 
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.connectionError) {
-      return NetworkApiException(
-        message: message,
-        details: responseData,
-      );
+      return NetworkApiException(message: message, details: responseData);
     }
     if (statusCode == 401 || statusCode == 403) {
       return UnauthorizedApiException(

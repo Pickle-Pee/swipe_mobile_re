@@ -7,8 +7,7 @@ class TokenStorage {
     try {
       await _storage.write(key: 'access_token', value: accessToken);
       return 0;
-    } catch (e) {
-      print("Error setting access token: $e");
+    } catch (_) {
       return -1;
     }
   }
@@ -17,8 +16,7 @@ class TokenStorage {
     try {
       await _storage.write(key: 'refresh_token', value: refreshToken);
       return 0;
-    } catch (e) {
-      print("Error setting refresh token: $e");
+    } catch (_) {
       return -1;
     }
   }
@@ -26,8 +24,7 @@ class TokenStorage {
   Future<String?> getRefreshToken() async {
     try {
       return await _storage.read(key: 'refresh_token');
-    } catch (e) {
-      print("Error getting refresh token: $e");
+    } catch (_) {
       return null;
     }
   }
@@ -35,8 +32,7 @@ class TokenStorage {
   Future<String?> getAccessToken() async {
     try {
       return await _storage.read(key: 'access_token');
-    } catch (e) {
-      print("Error getting access token: $e");
+    } catch (_) {
       return null;
     }
   }
@@ -46,8 +42,7 @@ class TokenStorage {
       await _storage.delete(key: 'access_token');
       await _storage.delete(key: 'refresh_token');
       return 0;
-    } catch (e) {
-      print("Error clearing tokens: $e");
+    } catch (_) {
       return -1;
     }
   }

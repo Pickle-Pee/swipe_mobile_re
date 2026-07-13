@@ -12,11 +12,13 @@ class UserHttp {
   late Dio dio;
 
   UserHttp._internal() {
-    dio = Dio(BaseOptions(
-      baseUrl: AppConfig.baseAppUrl,
-      connectTimeout: Duration(milliseconds: 5000),
-      receiveTimeout: Duration(milliseconds: 3000),
-    ));
+    dio = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.baseAppUrl,
+        connectTimeout: Duration(milliseconds: 5000),
+        receiveTimeout: Duration(milliseconds: 3000),
+      ),
+    );
     dio.interceptors.add(SwipeInterceptor(dio));
   }
 
@@ -41,8 +43,10 @@ class UserHttp {
   Future<int> addUserAttributes(AttributesResponseUser attributes) async {
     try {
       Map<String, dynamic> data = attributes.toJson();
-      Response response =
-          await dio.post("/attributes/add_attributes", data: data);
+      Response response = await dio.post(
+        "/attributes/add_attributes",
+        data: data,
+      );
       if (response.statusCode == 201 || response.statusCode == 200) {
         return 0;
       } else {
@@ -58,8 +62,10 @@ class UserHttp {
   Future<int> updateUserAttributes(AttributesResponseUser attributes) async {
     try {
       Map<String, dynamic> data = attributes.toJson();
-      Response response =
-          await dio.put("/attributes/update_attributes", data: data);
+      Response response = await dio.put(
+        "/attributes/update_attributes",
+        data: data,
+      );
       if (response.statusCode == 200) {
         return 0;
       } else {
@@ -74,10 +80,10 @@ class UserHttp {
 
   Future<int> setUserGeo(double lat, double lon) async {
     try {
-      await dio.post("/user/add_geolocation", data: {
-        "latitude": lat,
-        "longitude": lon,
-      });
+      await dio.post(
+        "/user/add_geolocation",
+        data: {"latitude": lat, "longitude": lon},
+      );
       return 0;
     } catch (e) {
       print("Error setting user geo: $e");
@@ -87,8 +93,10 @@ class UserHttp {
 
   Future<int> setUserInterest(List<int> interests) async {
     try {
-      await dio
-          .post("/interest/add_interests", data: {"interest_ids": interests});
+      await dio.post(
+        "/interest/add_interests",
+        data: {"interest_ids": interests},
+      );
       return 0;
     } catch (e) {
       print("Error setting user interests: $e");
@@ -104,8 +112,9 @@ class UserHttp {
       if (list.isEmpty) {
         return [];
       }
-      List<Interest> userInterests =
-          list.map((json) => Interest.fromJson(json)).toList();
+      List<Interest> userInterests = list
+          .map((json) => Interest.fromJson(json))
+          .toList();
       return userInterests;
     } catch (e) {
       print("Error fetching user interests: $e");
@@ -157,7 +166,6 @@ class UserHttp {
 
       // Переводим в нижний регистр
       result = result.toLowerCase();
-      print("result: $result");
 
       return result;
     } catch (e) {
@@ -169,8 +177,10 @@ class UserHttp {
   Future<List<String>> getCities(String city) async {
     try {
       print("start");
-      Response response =
-          await dio.get("/service/cities", queryParameters: {"query": city});
+      Response response = await dio.get(
+        "/service/cities",
+        queryParameters: {"query": city},
+      );
       print("end");
       List<dynamic> result = response.data;
       return result.map((element) => element as String).toList();
@@ -204,10 +214,13 @@ class UserHttp {
 
   Future<int> checkOTP(String phoneNumber, String otp) async {
     try {
-      await dio.post("/auth/check_code", queryParameters: {
-        "phone_number": phoneNumber,
-        "verification_code": otp
-      });
+      await dio.post(
+        "/auth/check_code",
+        queryParameters: {
+          "phone_number": phoneNumber,
+          "verification_code": otp,
+        },
+      );
       return 0;
     } catch (e) {
       print("Error checking OTP: $e");
@@ -217,9 +230,10 @@ class UserHttp {
 
   Future<int> checkPhonForReg(String phoneNumber) async {
     try {
-      Response response = await dio.post("/auth/check_phone",
-          queryParameters: {"phone_number": phoneNumber});
-      print("Response data: ${response.data}");
+      Response response = await dio.post(
+        "/auth/check_phone",
+        queryParameters: {"phone_number": phoneNumber},
+      );
       final result = response.data;
       if (result['code'] == 667) {
         return 667;
@@ -248,8 +262,10 @@ class UserHttp {
 
   Future<int> sendOTP(String phoneNumber) async {
     try {
-      await dio.post("/auth/send_code",
-          queryParameters: {"phone_number": phoneNumber});
+      await dio.post(
+        "/auth/send_code",
+        queryParameters: {"phone_number": phoneNumber},
+      );
       return 0;
     } catch (e) {
       print("Error sending OTP: $e");
@@ -284,10 +300,8 @@ class UserHttp {
 
   Future<int> refresh() async {
     try {
-      print("startRE#F");
       final String? token = await TokenStorage().getRefreshToken();
       if (token == null || token.isEmpty) {
-        print("Invalid refresh token.");
         return -1;
       }
       Response response = await dio.post(
@@ -295,8 +309,6 @@ class UserHttp {
         queryParameters: {"refresh_token": token},
         options: Options(receiveTimeout: Duration(milliseconds: 5000)),
       );
-      print("endRE#F");
-      print(response.data);
 
       // Удаляем 'Bearer ' из токенов перед сохранением
       String? newAccessToken = response.data["access_token"];
@@ -310,16 +322,16 @@ class UserHttp {
       await TokenStorage().setRefreshToken(newRefreshToken ?? "");
       return 0;
     } catch (e) {
-      print("Error refreshing token: $e");
       return -1;
     }
   }
 
   Future<int> updateFcmToken(String token) async {
     try {
-      Response response = await dio
-          .post("/communication/update_fcm_token", data: {"token": token});
-      print("FCM-токен успешно отправлен на сервер: ${response.data}");
+      Response response = await dio.post(
+        "/communication/update_fcm_token",
+        data: {"token": token},
+      );
       return 0;
     } catch (e) {
       print("Ошибка при отправке FCM-токена на сервер: $e");
@@ -386,14 +398,9 @@ class UserHttp {
         return 0;
       } else {
         print("Unexpected status code: ${response.statusCode}");
-        print("Response data: ${response.data}");
         return -1;
       }
     } on DioException catch (e) {
-      print("DioException: $e");
-      if (e.response != null) {
-        print("Response data: ${e.response?.data}");
-      }
       return -1;
     } catch (e) {
       print("Error updating user info: $e");
@@ -405,8 +412,6 @@ class UserHttp {
     try {
       Response response = await dio.get("/user/me");
       final res = response.data;
-
-      print('Server Response: $res');
 
       UserInfo userInfo = UserInfo.fromJson(res);
       return userInfo;
@@ -485,7 +490,8 @@ class UserInfo {
       aboutMe: json['about_me'] ?? '',
       status: json['status'] ?? '',
       avatarUrl: json['avatar_url'], // теперь может быть null
-      interest: (json['interests'] as List<dynamic>?)
+      interest:
+          (json['interests'] as List<dynamic>?)
               ?.map((e) => Interest.fromJson(e))
               .toList() ??
           [],

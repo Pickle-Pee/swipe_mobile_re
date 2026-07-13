@@ -12,7 +12,9 @@ class SwipeInterceptor extends InterceptorsWrapper {
 
   @override
   void onRequest(
-      RequestOptions options, RequestInterceptorHandler handler) async {
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     final String? access = await TokenStorage().getAccessToken();
     if (access != null && access.isNotEmpty) {
       options.headers["Authorization"] = "Bearer $access";
@@ -24,12 +26,10 @@ class SwipeInterceptor extends InterceptorsWrapper {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401 && repeatCounter.isEven) {
       repeatCounter++;
-      print("401 error detected, attempting to refresh token.");
 
       UserHttp userHttp = UserHttp();
       int resultr = await userHttp.refresh();
       if (resultr != 0) {
-        print("Failed to refresh token.");
         return handler.next(err);
       }
 
@@ -37,7 +37,6 @@ class SwipeInterceptor extends InterceptorsWrapper {
       if (token != null && token.isNotEmpty) {
         dio.options.headers["Authorization"] = "Bearer $token";
       }
-      print("Retrying request after token refresh");
 
       try {
         final RequestOptions options = err.requestOptions;
@@ -51,10 +50,8 @@ class SwipeInterceptor extends InterceptorsWrapper {
             extra: options.extra,
           ),
         );
-        print("Retry response: ${response.statusCode}");
         return handler.resolve(response);
-      } catch (e) {
-        print("Retry request failed: $e");
+      } catch (_) {
         return handler.next(err);
       }
     }

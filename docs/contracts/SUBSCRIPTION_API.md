@@ -90,4 +90,6 @@ Flutter поддерживает только перечисленные в эт
 
 Demo uses backend fake provider and same DTO/state path, with visible label; test DEMO terminal and production secrets remain backend-only. Production forbids demo/local URLs. Automatic recurring Charge is outside this stage; `renewable` is metadata until a separate approved task.
 
+Network logging uses `SafeApiLogInterceptor`. It never logs request/response bodies, query parameters, Authorization or PaymentURL; release builds disable its default sink. Allowed metadata: HTTP method, query-free path, status, duration, safe backend error code and request id.
+
 Buyer deployment, build commands, app-link policy and production limitations are documented in `docs/SUBSCRIPTION_BUYER_HANDOFF.md`.

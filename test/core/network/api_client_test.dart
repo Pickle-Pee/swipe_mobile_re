@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/core/network/api_client.dart';
 import 'package:swipe_mobile_re/core/network/api_exception.dart';
+import 'package:swipe_mobile_re/core/network/api_logger.dart';
 
 void main() {
   late MemoryTokenStore tokenStore;
@@ -16,11 +17,7 @@ void main() {
     adapter = MockHttpAdapter(handler);
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test'))
       ..httpClientAdapter = adapter;
-    return ApiClient(
-      dio: dio,
-      tokenStore: tokenStore,
-      logSink: logs.add,
-    );
+    return ApiClient(dio: dio, tokenStore: tokenStore, logSink: logs.add);
   }
 
   setUp(() {
@@ -169,12 +166,76 @@ void main() {
       throwsA(isA<NetworkApiException>()),
     );
   });
+
+  test('login and refresh responses never log tokens', () async {
+    final client = createClient((options, requestNumber) async {
+      return jsonResponse(200, {
+        'access_token': 'login-access-secret',
+        'refresh_token': 'login-refresh-secret',
+      });
+    });
+
+    await client.post<Map<String, dynamic>>(
+      '/auth/login',
+      data: {'phone': '+79990000000'},
+    );
+
+    final output = logs.join('\n');
+    expect(output, isNot(contains('login-access-secret')));
+    expect(output, isNot(contains('login-refresh-secret')));
+    expect(output, isNot(contains('+79990000000')));
+  });
+
+  test('checkout response never logs payment URL or response body', () async {
+    final client = createClient((options, requestNumber) async {
+      return jsonResponse(201, {
+        'payment_url': 'https://bank.test/form?token=payment-secret',
+        'payment_id': 'bank-payment-id',
+      });
+    });
+
+    await client.post<Map<String, dynamic>>(
+      '/subscriptions/checkout',
+      data: {'subscription_id': 1},
+    );
+
+    final output = logs.join('\n');
+    expect(output, contains('POST /subscriptions/checkout'));
+    expect(output, isNot(contains('payment-secret')));
+    expect(output, isNot(contains('bank-payment-id')));
+    expect(output, isNot(contains('payment_url')));
+  });
+
+  test('error log strips query, authorization and unsafe body', () async {
+    final client = createClient((options, requestNumber) async {
+      return jsonResponse(422, {
+        'error': {
+          'code': 'validation_error',
+          'message': 'Bearer leaked-authorization',
+        },
+      });
+    });
+
+    await expectLater(
+      client.get<void>(
+        '/failure?access_token=query-secret',
+        options: Options(headers: {'Authorization': 'Bearer header-secret'}),
+      ),
+      throwsA(isA<ValidationApiException>()),
+    );
+
+    final output = logs.join('\n');
+    expect(output, contains('/failure'));
+    expect(output, contains('code=validation_error'));
+    expect(output, isNot(contains('query-secret')));
+    expect(output, isNot(contains('header-secret')));
+    expect(output, isNot(contains('leaked-authorization')));
+    expect(SafeApiLogInterceptor.logsBodies, isFalse);
+  });
 }
 
-typedef MockHandler = Future<ResponseBody> Function(
-  RequestOptions options,
-  int requestNumber,
-);
+typedef MockHandler =
+    Future<ResponseBody> Function(RequestOptions options, int requestNumber);
 
 class MockHttpAdapter implements HttpClientAdapter {
   MockHttpAdapter(this._handler);

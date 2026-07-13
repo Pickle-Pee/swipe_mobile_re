@@ -76,7 +76,7 @@ Dart defines видны внутри приложения и не подходя
 - Не хранить PAN/CVV/ExpDate/RebillId/CardId.
 - Не создавать WebView или собственную форму карты; используется банковская форма во внешнем приложении.
 - Не считать цену из UI авторитетной и не отправлять её в checkout.
-- Legacy network-код проекта содержит `print(response.data)` вне subscription-модуля, включая auth refresh response; перед production release его нужно удалить или перевести на redacted logger.
+- REM-05 закрыла raw auth/refresh/profile/chat/likes/matches response logging. Shared `ApiClient` использует `SafeApiLogInterceptor`: только method, path без query, status, duration, safe error code и request id; headers и bodies не логируются, default sink отключён в release.
 - REM-04 удалила неиспользуемые legacy network/service/MethodChannel классы и старые DTO после подтверждения отсутствия runtime-потребителей. Канонический клиент использует только shared `ApiClient`, Riverpod controller и server-priced `/subscriptions/checkout`.
 
 ## Проверки
@@ -110,4 +110,4 @@ flutter build apk --debug
 
 ## Готовность
 
-Канонический Flutter subscription flow готов для demo. Backend scheduler/init blockers закрыты REM-01/REM-03, а Flutter legacy payment flow удалён REM-04. Non-demo запуск всё ещё заблокирован до закрытия оставшегося legacy Flutter logging. После этого покупатель должен предоставить production HTTPS endpoints, завершить банковский checklist и настроить Android release signing. Банковские secrets в мобильную сборку добавлять не требуется и запрещено.
+Канонический Flutter subscription flow готов для demo. Backend scheduler/init blockers закрыты REM-01/REM-03, Flutter legacy payment flow удалён REM-04, а опасное Flutter auth/payment logging закрыто REM-05. Перед production покупатель должен предоставить production HTTPS endpoints, завершить банковский checklist, выполнить финальный secret scan и настроить Android release signing. Банковские secrets в мобильную сборку добавлять не требуется и запрещено.
