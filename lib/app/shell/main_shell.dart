@@ -8,7 +8,6 @@ class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
-  
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +22,7 @@ class MainShell extends StatelessWidget {
               onTap: (i) => navigationShell.goBranch(
                 i,
                 initialLocation: i == navigationShell.currentIndex,
-              )
+              ),
             ),
           ),
         ],

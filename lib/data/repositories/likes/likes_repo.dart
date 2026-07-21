@@ -80,15 +80,16 @@ class CardInfo {
   String? avatarUrl;
   int matchPercentage;
   bool mutual;
-  CardInfo(
-      {required this.avatarUrl,
-      required this.cityName,
-      required this.dateOfBirth,
-      required this.firstName,
-      required this.aboutMe,
-      required this.id,
-      required this.isFavorite,
-      required this.matchPercentage,
-      required this.mutual,
-      required this.status});
+  CardInfo({
+    required this.avatarUrl,
+    required this.cityName,
+    required this.dateOfBirth,
+    required this.firstName,
+    required this.aboutMe,
+    required this.id,
+    required this.isFavorite,
+    required this.matchPercentage,
+    required this.mutual,
+    required this.status,
+  });
 }

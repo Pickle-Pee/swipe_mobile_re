@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/chat/chat_list_screen.dart';
 import '../../features/chat/chat_screen.dart';
+import '../../features/auth/presentation/phone_auth_screen.dart';
 import '../../features/discovery/discovery_screen.dart';
 import '../../features/likes/likes_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -22,8 +23,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
+        path: Routes.authPhone,
+        builder: (context, state) => const PhoneAuthScreen(),
+      ),
+      GoRoute(
         path: Routes.register,
-        builder: (context, state) => const RegistrationScreen(),
+        builder: (context, state) {
+          final arguments = state.extra;
+          return RegistrationScreen(
+            phoneNumber: arguments is RegistrationArguments
+                ? arguments.phoneNumber
+                : '',
+          );
+        },
       ),
 
       // Tabs shell: Discover is the FIRST tab
@@ -43,7 +55,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.chats,
-                builder: (context, state) => const ChatListScreen(),
+                builder: (context, state) => ChatListScreen(
+                  initialUserId: int.tryParse(
+                    state.uri.queryParameters['userId'] ?? '',
+                  ),
+                ),
               ),
             ],
           ),

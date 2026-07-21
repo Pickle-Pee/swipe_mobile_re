@@ -57,30 +57,6 @@ class _Vignette extends StatelessWidget {
   }
 }
 
-class _ToneOverlay extends StatelessWidget {
-  const _ToneOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0.0, 0.2),
-            radius: 1.2,
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.06),
-              Colors.black.withOpacity(0.14),
-            ],
-            stops: const [0.0, 0.78, 1.0],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,

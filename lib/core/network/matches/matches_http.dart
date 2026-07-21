@@ -8,8 +8,9 @@ class MatchesHttp {
     dio.interceptors.add(SwipeInterceptor(dio));
   }
 
-  Future<List<UserMatchInfo>?> getMatches(
-      {Map<String, dynamic>? filters}) async {
+  Future<List<UserMatchInfo>?> getMatches({
+    Map<String, dynamic>? filters,
+  }) async {
     try {
       Map<String, dynamic> queryParameters = {};
       if (filters != null && filters.isNotEmpty) {
@@ -56,7 +57,6 @@ class MatchesHttp {
         "${AppConfig.baseAppUrl}/match/find_matches",
         queryParameters: queryParameters,
       );
-      print(response.data);
       List<dynamic> list = response.data;
       List<UserMatchInfo> listUserMatch = list.map((element) {
         return UserMatchInfo(
@@ -74,7 +74,6 @@ class MatchesHttp {
       }).toList();
       return listUserMatch;
     } catch (e) {
-      print(e);
       return null;
     }
   }
@@ -99,9 +98,7 @@ class MatchesHttp {
 
   Future<int> addFavorite(int userId) async {
     try {
-      Response response = await dio
-          .post("${AppConfig.baseAppUrl}/likes/add_to_favorites/$userId");
-      print(response.data);
+      await dio.post("${AppConfig.baseAppUrl}/likes/add_to_favorites/$userId");
       return 0;
     } catch (e) {
       return -1;
@@ -110,9 +107,9 @@ class MatchesHttp {
 
   Future<int> deleteFavorite(int userId) async {
     try {
-      Response response = await dio.delete(
-          "${AppConfig.baseAppUrl}/likes/remove_from_favorites/$userId");
-      print(response.data);
+      await dio.delete(
+        "${AppConfig.baseAppUrl}/likes/remove_from_favorites/$userId",
+      );
       return 0;
     } catch (e) {
       return -1;
@@ -131,15 +128,16 @@ class UserMatchInfo {
   double matchPercentage;
   bool isFavarite;
   bool mutual;
-  UserMatchInfo(
-      {required this.avatarUrl,
-      required this.cityName,
-      required this.dateOfBirth,
-      required this.firstName,
-      required this.gender,
-      required this.matchPercentage,
-      required this.status,
-      required this.userId,
-      required this.isFavarite,
-      required this.mutual,});
+  UserMatchInfo({
+    required this.avatarUrl,
+    required this.cityName,
+    required this.dateOfBirth,
+    required this.firstName,
+    required this.gender,
+    required this.matchPercentage,
+    required this.status,
+    required this.userId,
+    required this.isFavarite,
+    required this.mutual,
+  });
 }

@@ -23,28 +23,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: AppTokens.screenPadding,
           children: [
-            Row(children: [
-              IconButton(onPressed: () => context.go(Routes.discover), icon: const Icon(Icons.chevron_left_rounded)),
-              Text('Settings', style: Theme.of(context).textTheme.titleLarge),
-            ]),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => context.go(Routes.discover),
+                  icon: const Icon(Icons.chevron_left_rounded),
+                ),
+                Text('Settings', style: Theme.of(context).textTheme.titleLarge),
+              ],
+            ),
             GlassSurface(
               child: Column(
                 children: [
                   SwitchListTile(
                     value: safeMode,
                     onChanged: (v) => setState(() => safeMode = v),
-                    title: const Text('Enhanced safety mode', style: TextStyle(color: Colors.white)),
+                    title: const Text(
+                      'Enhanced safety mode',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   SwitchListTile(
                     value: aiAssist,
                     onChanged: (v) => setState(() => aiAssist = v),
-                    title: const Text('AI conversation support', style: TextStyle(color: Colors.white)),
+                    title: const Text(
+                      'AI conversation support',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                   ListTile(
-                    title: const Text('Subscription', style: TextStyle(color: Colors.white)),
+                    title: const Text(
+                      'Subscription',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.go(Routes.premium),
-                  )
+                  ),
                 ],
               ),
             ),

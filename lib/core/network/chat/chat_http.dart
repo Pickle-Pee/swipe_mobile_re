@@ -7,7 +7,6 @@ import 'package:swipe_mobile_re/data/repositories/chat/chat_info.dart';
 import 'package:swipe_mobile_re/data/repositories/chat/chat_repo.dart';
 import 'package:swipe_mobile_re/data/repositories/chat/message.dart';
 
-
 class ChatHttp {
   Dio dio = Dio();
   ChatHttp() {
@@ -20,16 +19,16 @@ class ChatHttp {
         "${AppConfig.baseAppUrl}/communication/$chatId",
       );
       final data = response.data;
-      print(data);
 
       // Парсим пользователя
       final user = UserInChat(
-          avatarUrl: data["avatar_url"],
-          firstName: data["first_name"],
-          status: data["status"],
-          userAge: data["user_age"],
-          userId: data["user_id"],
-          hasSubscription: data["is_subscription"]);
+        avatarUrl: data["avatar_url"],
+        firstName: data["first_name"],
+        status: data["status"],
+        userAge: data["user_age"],
+        userId: data["user_id"],
+        hasSubscription: data["is_subscription"],
+      );
 
       // Парсим сообщения
       List<Message> messages = [];
@@ -68,7 +67,8 @@ class ChatHttp {
     try {
       final String requestUrl = '/communication/get_chat_id_by_user_id';
       print(
-          'Requesting URL: ${AppConfig.baseAppUrl}$requestUrl?recipient_id=$recipientId');
+        'Requesting URL: ${AppConfig.baseAppUrl}$requestUrl?recipient_id=$recipientId',
+      );
 
       Response response = await dio.get(
         requestUrl,
@@ -76,7 +76,6 @@ class ChatHttp {
       );
 
       print('Response status: ${response.statusCode}');
-      print('Response data: ${response.data}');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -100,7 +99,6 @@ class ChatHttp {
       );
       final data = response.data;
       int chatId = data["chat_id"];
-      print(data);
       return chatId;
     } catch (e) {
       print("Error in createChat: $e");
@@ -110,19 +108,21 @@ class ChatHttp {
 
   Future<List<ChatInfo>> getUserChats() async {
     try {
-      Response response =
-          await dio.get("${AppConfig.baseAppUrl}/communication/get_chats");
+      Response response = await dio.get(
+        "${AppConfig.baseAppUrl}/communication/get_chats",
+      );
       final data = response.data;
       List<dynamic> list = data;
       List<ChatInfo> userChats = list.map((chat) {
         final userData = chat["user"] ?? {};
         final user = UserInChat(
-            avatarUrl: userData["avatar_url"] ?? '',
-            firstName: userData["first_name"] ?? 'Unknown',
-            status: userData["status"] ?? 'offline',
-            userAge: userData["user_age"] ?? 0,
-            userId: userData["user_id"] ?? 0,
-            hasSubscription: userData["is_subscription"] ?? false);
+          avatarUrl: userData["avatar_url"] ?? '',
+          firstName: userData["first_name"] ?? 'Unknown',
+          status: userData["status"] ?? 'offline',
+          userAge: userData["user_age"] ?? 0,
+          userId: userData["user_id"] ?? 0,
+          hasSubscription: userData["is_subscription"] ?? false,
+        );
 
         // Парсим сообщения
         List<Message> messages = [];
@@ -154,8 +154,10 @@ class ChatHttp {
           "${AppConfig.baseAppUrl}/service/upload/message_image/$chatId";
 
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(imageFile.path,
-            filename: imageFile.path.split('/').last),
+        "file": await MultipartFile.fromFile(
+          imageFile.path,
+          filename: imageFile.path.split('/').last,
+        ),
         // Добавьте другие поля, если необходимо, например, access_token
       });
 
@@ -171,7 +173,8 @@ class ChatHttp {
         onSendProgress: (int sent, int total) {
           double progress = sent / total;
           print(
-              "Загрузка изображения: ${(progress * 100).toStringAsFixed(0)}%");
+            "Загрузка изображения: ${(progress * 100).toStringAsFixed(0)}%",
+          );
           // Здесь вы можете обновить UI, например, показать прогресс-бар
         },
       );
@@ -184,7 +187,8 @@ class ChatHttp {
         return fileUrl;
       } else {
         print(
-            "Не удалось загрузить изображение. Статус: ${response.statusCode}");
+          "Не удалось загрузить изображение. Статус: ${response.statusCode}",
+        );
         return null;
       }
     } catch (e) {
@@ -200,8 +204,10 @@ class ChatHttp {
           "${AppConfig.baseAppUrl}/service/upload/message_voice/$chatId";
 
       FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(voiceFile.path,
-            filename: voiceFile.path.split('/').last),
+        "file": await MultipartFile.fromFile(
+          voiceFile.path,
+          filename: voiceFile.path.split('/').last,
+        ),
         // Добавьте другие поля, если необходимо, например, access_token
       });
 
@@ -217,7 +223,8 @@ class ChatHttp {
         onSendProgress: (int sent, int total) {
           double progress = sent / total;
           print(
-              "Загрузка голосового сообщения: ${(progress * 100).toStringAsFixed(0)}%");
+            "Загрузка голосового сообщения: ${(progress * 100).toStringAsFixed(0)}%",
+          );
           // Здесь вы можете обновить UI, например, показать прогресс-бар
         },
       );
@@ -230,7 +237,8 @@ class ChatHttp {
         return fileUrl;
       } else {
         print(
-            "Не удалось загрузить голосовое сообщение. Статус: ${response.statusCode}");
+          "Не удалось загрузить голосовое сообщение. Статус: ${response.statusCode}",
+        );
         return null;
       }
     } catch (e) {

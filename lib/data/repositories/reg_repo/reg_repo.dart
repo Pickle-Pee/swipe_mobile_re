@@ -60,7 +60,7 @@ abstract class _RegRepo with Store {
       "last_name": surname,
       "date_of_birth": birth,
       "gender": gender,
-      "city_name": city
+      "city_name": city,
     };
   }
 }
