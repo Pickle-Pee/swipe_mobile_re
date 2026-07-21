@@ -1,36 +1,83 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:swipe_mobile_re/shared/ui/animated_liquid_background.dart';
 
 import '../theme/tokens.dart';
 
 class AppGradientScaffold extends StatelessWidget {
-  const AppGradientScaffold({super.key, required this.child});
+  const AppGradientScaffold({
+    super.key,
+    required this.child,
+    this.safeArea = true,
+  });
+
+  final Widget child;
+  final bool safeArea;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBackdrop(child: safeArea ? SafeArea(child: child) : child);
+  }
+}
+
+/// Static, repaint-stable Midnight Aura atmosphere.
+class AppBackdrop extends StatelessWidget {
+  const AppBackdrop({super.key, required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.expand,
       children: [
-        // 1) Base gradient (ONE source of truth)
-        const Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(gradient: AppTokens.appBackground),
-          ),
+        const DecoratedBox(
+          decoration: BoxDecoration(gradient: AppTokens.appBackground),
         ),
-
-        // 2) Atmosphere layer (ONLY glow fields, no base/vignette inside!)
-        const Positioned.fill(child: AiAtmosphericBackground()),
-
-        // 3) Vignette (ONE)
-        const Positioned.fill(child: _Vignette()),
-
-        // 4) Content
-        SafeArea(child: child),
+        const RepaintBoundary(child: CustomPaint(painter: _AuraPainter())),
+        const IgnorePointer(child: _Vignette()),
+        child,
       ],
     );
   }
+}
+
+class _AuraPainter extends CustomPainter {
+  const _AuraPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final longest = size.longestSide;
+    _paintAura(
+      canvas,
+      center: Offset(size.width * 0.12, size.height * 0.18),
+      radius: longest * 0.72,
+      color: AppTokens.brandViolet.withValues(alpha: 0.16),
+    );
+    _paintAura(
+      canvas,
+      center: Offset(size.width * 0.94, size.height * 0.76),
+      radius: longest * 0.62,
+      color: AppTokens.brandRose.withValues(alpha: 0.12),
+    );
+  }
+
+  void _paintAura(
+    Canvas canvas, {
+    required Offset center,
+    required double radius,
+    required Color color,
+  }) {
+    final paint = Paint()
+      ..shader = ui.Gradient.radial(center, radius, [
+        color,
+        Colors.transparent,
+      ]);
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _AuraPainter oldDelegate) => false;
 }
 
 class _Vignette extends StatelessWidget {
@@ -38,67 +85,112 @@ class _Vignette extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0.0, 0.15),
-            radius: 1.15,
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.28),
-              Colors.black.withOpacity(0.46),
-            ],
-            stops: const [0.0, 0.72, 1.0],
-          ),
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, 0.05),
+          radius: 1.12,
+          colors: [Colors.transparent, Color(0x33000000), Color(0x99000000)],
+          stops: [0, 0.68, 1],
         ),
       ),
     );
   }
 }
+
+enum GlassLevel { navigation, overlay, sheet }
 
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
-    this.radius = AppTokens.radiusLg,
-    this.borderColor = AppTokens.border,
-    this.backgroundColor = AppTokens.surface,
+    this.level = GlassLevel.overlay,
+    this.padding = const EdgeInsets.all(AppTokens.space16),
+    this.radius = AppTokens.radiusLarge,
+    this.borderRadius,
+    this.borderColor,
+    this.backgroundColor,
+    this.applyBlur = true,
   });
 
   final Widget child;
+  final GlassLevel level;
   final EdgeInsetsGeometry padding;
   final double radius;
-  final Color borderColor;
-  final Color backgroundColor;
+  final BorderRadiusGeometry? borderRadius;
+  final Color? borderColor;
+  final Color? backgroundColor;
+  final bool applyBlur;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: AppTokens.blurSm,
-          sigmaY: AppTokens.blurSm,
+    final spec = _GlassSpec.forLevel(level);
+    final highContrast = MediaQuery.highContrastOf(context);
+    final corners = borderRadius ?? BorderRadius.circular(radius);
+    final fill =
+        backgroundColor ??
+        (highContrast ? AppTokens.glassActive : spec.background);
+    final edge =
+        borderColor ?? (highContrast ? AppTokens.glassHighlight : spec.border);
+    final surface = Material(
+      type: MaterialType.transparency,
+      child: Ink(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: corners,
+          border: Border.all(color: edge),
+          boxShadow: level == GlassLevel.sheet
+              ? AppTokens.surfaceShadow()
+              : null,
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Ink(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: borderColor),
-            ),
-            child: child,
-          ),
-        ),
+        child: child,
       ),
+    );
+
+    return ClipRRect(
+      borderRadius: corners,
+      child: applyBlur
+          ? BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: spec.blur, sigmaY: spec.blur),
+              child: surface,
+            )
+          : surface,
     );
   }
 }
 
+class _GlassSpec {
+  const _GlassSpec({
+    required this.background,
+    required this.border,
+    required this.blur,
+  });
+
+  final Color background;
+  final Color border;
+  final double blur;
+
+  static _GlassSpec forLevel(GlassLevel level) => switch (level) {
+    GlassLevel.navigation => const _GlassSpec(
+      background: AppTokens.glassMedium,
+      border: AppTokens.glassBorder,
+      blur: AppTokens.blurNavigation,
+    ),
+    GlassLevel.overlay => const _GlassSpec(
+      background: Color(0x14FFFFFF),
+      border: Color(0x1FFFFFFF),
+      blur: AppTokens.blurOverlay,
+    ),
+    GlassLevel.sheet => const _GlassSpec(
+      background: Color(0x24FFFFFF),
+      border: Color(0x29FFFFFF),
+      blur: AppTokens.blurSheet,
+    ),
+  };
+}
+
+/// Compatibility button for screens outside DES-01.
 class GradientButton extends StatelessWidget {
   const GradientButton({
     super.key,
@@ -114,36 +206,32 @@ class GradientButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: AppTokens.ctaGradient,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: AppTokens.glowShadow(AppTokens.violet),
+        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+        boxShadow: AppTokens.brandShadow(),
       ),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w400,
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTokens.space24,
+            vertical: AppTokens.space12,
           ),
         ),
+        child: Text(label),
       ),
     );
   }
 }
 
+/// Compatibility tag for screens outside DES-01.
 class PillTag extends StatelessWidget {
   const PillTag({
     super.key,
     required this.label,
-    this.color = AppTokens.blueSoft,
+    this.color = AppTokens.brandViolet,
   });
 
   final String label;
@@ -152,13 +240,19 @@ class PillTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.5)),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space12,
+        vertical: AppTokens.space8,
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppTokens.radiusPill),
+        border: Border.all(color: color.withValues(alpha: 0.34)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
+      ),
     );
   }
 }
@@ -172,23 +266,20 @@ class AiInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassSurface(
-      backgroundColor: AppTokens.pinkSoft.withOpacity(0.09),
-      borderColor: AppTokens.pinkSoft.withOpacity(0.25),
+      applyBlur: false,
+      backgroundColor: AppTokens.surfaceSolid,
+      borderColor: AppTokens.glassBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(color: AppTokens.pinkSoft, fontSize: 13),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: AppTokens.brandRose),
           ),
-          const SizedBox(height: 4),
-          Text(
-            message,
-            style: const TextStyle(
-              color: AppTokens.textSecondary,
-              fontSize: 13,
-            ),
-          ),
+          const SizedBox(height: AppTokens.space4),
+          Text(message, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
@@ -197,6 +288,7 @@ class AiInsightCard extends StatelessWidget {
 
 class SafetyBadge extends StatelessWidget {
   const SafetyBadge({super.key, required this.label});
+
   final String label;
 
   @override
@@ -204,11 +296,17 @@ class SafetyBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.verified_user_rounded, color: AppTokens.mint, size: 14),
-        const SizedBox(width: 6),
+        const Icon(
+          Icons.verified_user_rounded,
+          color: AppTokens.success,
+          size: 14,
+        ),
+        const SizedBox(width: AppTokens.space8),
         Text(
           label,
-          style: const TextStyle(color: AppTokens.mint, fontSize: 11),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: AppTokens.success),
         ),
       ],
     );
@@ -223,23 +321,28 @@ class ChatBubbleGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = mine
-        ? AppTokens.blueSoft.withOpacity(0.2)
-        : AppTokens.surfaceStrong;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 280),
         child: GlassSurface(
-          radius: 22,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          backgroundColor: color,
+          applyBlur: false,
+          radius: AppTokens.radiusMedium,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTokens.space16,
+            vertical: AppTokens.space12,
+          ),
+          backgroundColor: mine
+              ? AppTokens.brandViolet.withValues(alpha: 0.20)
+              : AppTokens.surfaceSolid,
           borderColor: mine
-              ? AppTokens.blueSoft.withOpacity(0.45)
-              : AppTokens.border,
+              ? AppTokens.brandViolet.withValues(alpha: 0.38)
+              : AppTokens.glassBorder,
           child: Text(
             text,
-            style: const TextStyle(color: AppTokens.textPrimary, fontSize: 14),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTokens.textPrimary),
           ),
         ),
       ),

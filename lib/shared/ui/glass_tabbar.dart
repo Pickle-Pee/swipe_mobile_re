@@ -1,8 +1,184 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+
 import '../theme/tokens.dart';
 import 'liquid_ui.dart';
 
+class GlassNavigationDestination {
+  const GlassNavigationDestination({
+    required this.label,
+    required this.icon,
+    this.badgeCount = 0,
+  });
+
+  final String label;
+  final IconData icon;
+  final int badgeCount;
+}
+
+class GlassNavigationBar extends StatelessWidget {
+  const GlassNavigationBar({
+    super.key,
+    required this.currentIndex,
+    required this.onSelected,
+    required this.destinations,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onSelected;
+  final List<GlassNavigationDestination> destinations;
+
+  @override
+  Widget build(BuildContext context) {
+    assert(destinations.length >= 2);
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        AppTokens.space16,
+        0,
+        AppTokens.space16,
+        AppTokens.space12,
+      ),
+      child: GlassSurface(
+        level: GlassLevel.navigation,
+        radius: AppTokens.radiusXLarge,
+        padding: const EdgeInsets.all(AppTokens.space4),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              for (var index = 0; index < destinations.length; index++)
+                Expanded(
+                  child: _NavigationItem(
+                    destination: destinations[index],
+                    selected: currentIndex == index,
+                    onTap: () => onSelected(index),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationItem extends StatelessWidget {
+  const _NavigationItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final GlassNavigationDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final badge = destination.badgeCount;
+    final semanticsLabel = badge > 0
+        ? '${destination.label}, $badge unread'
+        : destination.label;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: reduceMotion ? Duration.zero : AppTokens.motionTab,
+            curve: Curves.easeOutCubic,
+            margin: const EdgeInsets.all(AppTokens.space4),
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4),
+            decoration: BoxDecoration(
+              color: selected ? AppTokens.glassActive : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+              border: selected
+                  ? Border.all(color: AppTokens.glassBorder)
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      destination.icon,
+                      size: AppTokens.iconNavigation,
+                      color: selected
+                          ? AppTokens.textPrimary
+                          : AppTokens.textMuted,
+                    ),
+                    if (badge > 0)
+                      Positioned(
+                        right: -12,
+                        top: -8,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 18),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTokens.space4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTokens.brandRose,
+                            borderRadius: BorderRadius.circular(
+                              AppTokens.radiusPill,
+                            ),
+                            border: Border.all(
+                              color: AppTokens.backgroundElevated,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            badge > 99 ? '99+' : '$badge',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppTokens.textPrimary,
+                              fontSize: 10,
+                              height: 1.3,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppTokens.space4),
+                AnimatedDefaultTextStyle(
+                  duration: reduceMotion ? Duration.zero : AppTokens.motionTab,
+                  style:
+                      Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: selected
+                            ? AppTokens.textPrimary
+                            : AppTokens.textMuted,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ) ??
+                      const TextStyle(),
+                  child: Text(
+                    destination.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compatibility wrapper retained for callers outside the redesigned shell.
 class GlassTabBar extends StatelessWidget {
   const GlassTabBar({
     super.key,
@@ -15,144 +191,27 @@ class GlassTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // Плавающий: НЕ “впритык” к низу
-      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
-      child: GlassSurface(
-        radius: 30,
-        // Чуть меньше padding, как в TG
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        // Для тёмной подложки “стекло” лучше не белое, а дымчатое:
-        backgroundColor: AppTokens.surface.withOpacity(0.18),
-        borderColor: Colors.white.withOpacity(0.08),
-        child: Row(
-          children: [
-            _TabItem(
-              label: 'Discover',
-              icon: Icons.auto_awesome_outlined,
-              selected: currentIndex == 0,
-              onTap: () => onTap(0),
-            ),
-            _TabItem(
-              label: 'Chats',
-              icon: Icons.chat_bubble_outline,
-              selected: currentIndex == 1,
-              onTap: () => onTap(1),
-              badge: 34, // пример бейджа для Чатов
-            ),
-            _TabItem(
-              label: 'Likes',
-              icon: Icons.favorite_border,
-              selected: currentIndex == 2,
-              onTap: () => onTap(2),
-            ),
-            _TabItem(
-              label: 'Profile',
-              icon: Icons.account_circle_outlined,
-              selected: currentIndex == 3,
-              onTap: () => onTap(3),
-            ),
-          ],
+    return GlassNavigationBar(
+      currentIndex: currentIndex,
+      onSelected: onTap,
+      destinations: const [
+        GlassNavigationDestination(
+          label: 'Discover',
+          icon: Icons.explore_outlined,
         ),
-      ),
-    );
-  }
-}
-
-class _TabItem extends StatelessWidget {
-  const _TabItem({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-    this.badge,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  final int? badge;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = selected;
-
-    return Expanded(
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        // Мягкая подсветка активного таба (как TG)
-                        gradient: active ? AppTokens.ctaGradient : null,
-                        color: active ? null : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        icon,
-                        size: 18,
-                        color: active
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.70),
-                      ),
-                    ),
-                    if (badge != null && badge! > 0)
-                      Positioned(
-                        right: -8,
-                        top: -8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.10),
-                            ),
-                          ),
-                          child: Text(
-                            '$badge',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: active
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.70),
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        GlassNavigationDestination(
+          label: 'Chats',
+          icon: Icons.chat_bubble_outline_rounded,
         ),
-      ),
+        GlassNavigationDestination(
+          label: 'Likes',
+          icon: Icons.favorite_border_rounded,
+        ),
+        GlassNavigationDestination(
+          label: 'Profile',
+          icon: Icons.person_outline_rounded,
+        ),
+      ],
     );
   }
 }
