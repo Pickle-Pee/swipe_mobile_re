@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:swipe_mobile_re/shared/ui/app_theme.dart';
+import '../features/auth/application/auth_providers.dart';
+import '../features/chat/application/chat_providers.dart';
 import 'router/app_router.dart';
 import 'providers/navigation_events_provider.dart';
 
@@ -22,6 +24,12 @@ class _AppState extends ConsumerState<App> {
     // Subscribe once at app start
     final nav = ref.read(navigationEventsProvider);
     final router = ref.read(appRouterProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(authControllerProvider.notifier).restoreSession());
+    });
+    ref.read(chatSocketManagerProvider);
+    ref.read(chatRealtimeProvider);
 
     _navSub = nav.stream.listen((event) {
       router.go(event.route);

@@ -1,8 +1,5 @@
 // models/attributes_response_user.dart
 
-
-
-
 import 'package:swipe_mobile_re/data/models/enums.dart';
 
 class AttributesResponseUser {

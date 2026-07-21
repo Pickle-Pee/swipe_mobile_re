@@ -52,22 +52,23 @@ class Message extends _Message with _$Message {
     DateTime? readAt,
     String? localId,
   }) : super(
-          id: id,
-          chatId: chatId,
-          status: status,
-          content: content,
-          senderId: senderId,
-          recipientId: recipientId, // Инициализируем recipientId
-          replyMessageId: replyMessageId,
-          voiceData: voiceData,
-          mediaUrls:
-              mediaUrls != null ? ObservableList<String>.of(mediaUrls) : null,
-          messageType: messageType ?? 'text',
-          createdAt: createdAt,
-          deliveredAt: deliveredAt,
-          readAt: readAt,
-          localId: localId,
-        );
+         id: id,
+         chatId: chatId,
+         status: status,
+         content: content,
+         senderId: senderId,
+         recipientId: recipientId, // Инициализируем recipientId
+         replyMessageId: replyMessageId,
+         voiceData: voiceData,
+         mediaUrls: mediaUrls != null
+             ? ObservableList<String>.of(mediaUrls)
+             : null,
+         messageType: messageType ?? 'text',
+         createdAt: createdAt,
+         deliveredAt: deliveredAt,
+         readAt: readAt,
+         localId: localId,
+       );
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
@@ -157,9 +158,9 @@ abstract class _Message with Store {
     this.deliveredAt,
     this.readAt,
     String? localId,
-  })  : chatId = chatId, // Инициализируем chatId
-        messageType = messageType ?? 'text',
-        localId = localId ?? const Uuid().v4();
+  }) : chatId = chatId, // Инициализируем chatId
+       messageType = messageType ?? 'text',
+       localId = localId ?? const Uuid().v4();
 }
 
 // Функция для парсинга даты из строки в DateTime

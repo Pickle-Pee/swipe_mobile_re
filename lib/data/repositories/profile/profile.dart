@@ -62,9 +62,7 @@ abstract class _ProfileStore with Store {
   Future<void> getUserPhoto() async {
     final result = await PhotoHttp().getUserPhoto();
     if (result.isNotEmpty) {
-      result.sort(
-        (a, b) => a.isAvatar ? 0 : 1,
-      );
+      result.sort((a, b) => a.isAvatar ? 0 : 1);
       photos = ObservableList.of(result);
     }
   }

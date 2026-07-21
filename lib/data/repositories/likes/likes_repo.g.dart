@@ -9,8 +9,10 @@ part of 'likes_repo.dart';
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
 mixin _$LikesStore on _LikesStore, Store {
-  late final _$likesListAtom =
-      Atom(name: '_LikesStore.likesList', context: context);
+  late final _$likesListAtom = Atom(
+    name: '_LikesStore.likesList',
+    context: context,
+  );
 
   @override
   ObservableList<CardInfo> get likesList {
@@ -25,8 +27,10 @@ mixin _$LikesStore on _LikesStore, Store {
     });
   }
 
-  late final _$favoriteListAtom =
-      Atom(name: '_LikesStore.favoriteList', context: context);
+  late final _$favoriteListAtom = Atom(
+    name: '_LikesStore.favoriteList',
+    context: context,
+  );
 
   @override
   ObservableList<CardInfo> get favoriteList {
@@ -41,8 +45,10 @@ mixin _$LikesStore on _LikesStore, Store {
     });
   }
 
-  late final _$melikedListAtom =
-      Atom(name: '_LikesStore.melikedList', context: context);
+  late final _$melikedListAtom = Atom(
+    name: '_LikesStore.melikedList',
+    context: context,
+  );
 
   @override
   ObservableList<CardInfo> get melikedList {
@@ -57,8 +63,10 @@ mixin _$LikesStore on _LikesStore, Store {
     });
   }
 
-  late final _$requiredUpdateAtom =
-      Atom(name: '_LikesStore.requiredUpdate', context: context);
+  late final _$requiredUpdateAtom = Atom(
+    name: '_LikesStore.requiredUpdate',
+    context: context,
+  );
 
   @override
   bool get requiredUpdate {
@@ -73,8 +81,10 @@ mixin _$LikesStore on _LikesStore, Store {
     });
   }
 
-  late final _$requiredUpdateFavoriteAtom =
-      Atom(name: '_LikesStore.requiredUpdateFavorite', context: context);
+  late final _$requiredUpdateFavoriteAtom = Atom(
+    name: '_LikesStore.requiredUpdateFavorite',
+    context: context,
+  );
 
   @override
   bool get requiredUpdateFavorite {
@@ -84,14 +94,19 @@ mixin _$LikesStore on _LikesStore, Store {
 
   @override
   set requiredUpdateFavorite(bool value) {
-    _$requiredUpdateFavoriteAtom
-        .reportWrite(value, super.requiredUpdateFavorite, () {
-      super.requiredUpdateFavorite = value;
-    });
+    _$requiredUpdateFavoriteAtom.reportWrite(
+      value,
+      super.requiredUpdateFavorite,
+      () {
+        super.requiredUpdateFavorite = value;
+      },
+    );
   }
 
-  late final _$requiredUpdatemelikedAtom =
-      Atom(name: '_LikesStore.requiredUpdatemeliked', context: context);
+  late final _$requiredUpdatemelikedAtom = Atom(
+    name: '_LikesStore.requiredUpdatemeliked',
+    context: context,
+  );
 
   @override
   bool get requiredUpdatemeliked {
@@ -101,43 +116,55 @@ mixin _$LikesStore on _LikesStore, Store {
 
   @override
   set requiredUpdatemeliked(bool value) {
-    _$requiredUpdatemelikedAtom.reportWrite(value, super.requiredUpdatemeliked,
-        () {
-      super.requiredUpdatemeliked = value;
-    });
+    _$requiredUpdatemelikedAtom.reportWrite(
+      value,
+      super.requiredUpdatemeliked,
+      () {
+        super.requiredUpdatemeliked = value;
+      },
+    );
   }
 
-  late final _$getListLikesAsyncAction =
-      AsyncAction('_LikesStore.getListLikes', context: context);
+  late final _$getListLikesAsyncAction = AsyncAction(
+    '_LikesStore.getListLikes',
+    context: context,
+  );
 
   @override
   Future<void> getListLikes() {
     return _$getListLikesAsyncAction.run(() => super.getListLikes());
   }
 
-  late final _$getListMeLikedAsyncAction =
-      AsyncAction('_LikesStore.getListMeLiked', context: context);
+  late final _$getListMeLikedAsyncAction = AsyncAction(
+    '_LikesStore.getListMeLiked',
+    context: context,
+  );
 
   @override
   Future<void> getListMeLiked() {
     return _$getListMeLikedAsyncAction.run(() => super.getListMeLiked());
   }
 
-  late final _$getListFavoriteAsyncAction =
-      AsyncAction('_LikesStore.getListFavorite', context: context);
+  late final _$getListFavoriteAsyncAction = AsyncAction(
+    '_LikesStore.getListFavorite',
+    context: context,
+  );
 
   @override
   Future<void> getListFavorite() {
     return _$getListFavoriteAsyncAction.run(() => super.getListFavorite());
   }
 
-  late final _$_LikesStoreActionController =
-      ActionController(name: '_LikesStore', context: context);
+  late final _$_LikesStoreActionController = ActionController(
+    name: '_LikesStore',
+    context: context,
+  );
 
   @override
   dynamic likesEditRequiredUpdate() {
     final _$actionInfo = _$_LikesStoreActionController.startAction(
-        name: '_LikesStore.likesEditRequiredUpdate');
+      name: '_LikesStore.likesEditRequiredUpdate',
+    );
     try {
       return super.likesEditRequiredUpdate();
     } finally {
@@ -148,7 +175,8 @@ mixin _$LikesStore on _LikesStore, Store {
   @override
   dynamic favoriteEditRequiredUpdate() {
     final _$actionInfo = _$_LikesStoreActionController.startAction(
-        name: '_LikesStore.favoriteEditRequiredUpdate');
+      name: '_LikesStore.favoriteEditRequiredUpdate',
+    );
     try {
       return super.favoriteEditRequiredUpdate();
     } finally {
@@ -159,7 +187,8 @@ mixin _$LikesStore on _LikesStore, Store {
   @override
   dynamic meLikedEditRequiredUpdate() {
     final _$actionInfo = _$_LikesStoreActionController.startAction(
-        name: '_LikesStore.meLikedEditRequiredUpdate');
+      name: '_LikesStore.meLikedEditRequiredUpdate',
+    );
     try {
       return super.meLikedEditRequiredUpdate();
     } finally {

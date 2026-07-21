@@ -9,7 +9,6 @@ import 'package:swipe_mobile_re/data/repositories/chat/chat_repo.dart';
 import 'package:swipe_mobile_re/data/repositories/chat/message.dart';
 import 'package:swipe_mobile_re/data/repositories/profile/profile.dart';
 
-
 class AppSocket {
   static const status_mapping = {
     'sent': 0,
@@ -17,7 +16,6 @@ class AppSocket {
     'read': 2,
     'sending': -1,
   };
-
 
   final NavigationEvents navigationEvents;
 
@@ -108,7 +106,8 @@ class AppSocket {
           .setTransports(['websocket'])
           .enableReconnection() // Включаем автоматическое переподключение
           .setReconnectionDelay(
-              2000) // Задержка между попытками в миллисекундах
+            2000,
+          ) // Задержка между попытками в миллисекундах
           .disableAutoConnect()
           .build(),
     );
@@ -147,9 +146,8 @@ class AppSocket {
         "all_messages_read",
         "message_read",
         "message_delivered",
-        "read_messages"
+        "read_messages",
       ].contains(event)) {
-        print("Socket Event: $event /// Data: $data");
         // Обработка других событий при необходимости
       }
     });
@@ -183,7 +181,6 @@ class AppSocket {
     if (status == 401) {
       print("Authentication failed. Attempting to refresh token.");
       int result = await UserHttp().refresh();
-      print("Refresh token result: $result");
       if (result == 0) {
         await _authenticateSocket();
       } else {
@@ -241,8 +238,6 @@ class AppSocket {
 
   /// Обработчик события подтверждения отправки сообщения
   Future<void> _handleCompleterEvent(dynamic data) async {
-    print("[_handleCompleterEvent] data=$data");
-
     final int status = data["status"];
     final int chatId = data["chat_id"];
     final String localId = data["external_message_id"];
@@ -250,8 +245,10 @@ class AppSocket {
     final String? createdAtStr = data["created_at"];
     final DateTime? createdAt = parseUtcDateTime(createdAtStr);
 
-    print("[_handleCompleterEvent] chatId=$chatId, localId=$localId, "
-        "id=$id, status=$status, createdAt=$createdAt");
+    print(
+      "[_handleCompleterEvent] chatId=$chatId, localId=$localId, "
+      "id=$id, status=$status, createdAt=$createdAt",
+    );
 
     // Обновляем
     chatStore.updateStatus(chatId, status, localId, id, createdAt);
@@ -260,13 +257,15 @@ class AppSocket {
     chatStore.updateChatId(localId, chatId);
 
     print(
-        "[_handleCompleterEvent] after updateStatus/updateChatId, chat $chatId now has messages:");
+      "[_handleCompleterEvent] after updateStatus/updateChatId, chat $chatId now has messages:",
+    );
     final chat = chatStore.chats[chatId];
     if (chat != null) {
       for (var i = 0; i < chat.messages.length; i++) {
         final m = chat.messages[i];
         print(
-            "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}");
+          "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}",
+        );
       }
     }
   }
@@ -282,8 +281,6 @@ class AppSocket {
 
   /// Обработчик события получения нового сообщения
   void _handleNewMessageEvent(dynamic data) {
-    print("[_handleNewMessageEvent] data=$data");
-
     final int chatId = data["chat_id"];
     final int id = data["message_id"];
     final int senderId = data["sender_id"];
@@ -294,8 +291,10 @@ class AppSocket {
 
     final int status = data["status"] ?? 1; // default delivered=1
 
-    print("[_handleNewMessageEvent] chatId=$chatId, id=$id, "
-        "senderId=$senderId, extMsgId=$extMsgId, content=$content, status=$status");
+    print(
+      "[_handleNewMessageEvent] chatId=$chatId, id=$id, "
+      "senderId=$senderId, extMsgId=$extMsgId, content=$content, status=$status",
+    );
 
     // Создаем сообщение
     final mess = Message(
@@ -312,7 +311,8 @@ class AppSocket {
 
     // Добавляем
     print(
-        "[_handleNewMessageEvent] Will call addMessage with localId=$extMsgId");
+      "[_handleNewMessageEvent] Will call addMessage with localId=$extMsgId",
+    );
     chatStore.addMessage(mess, caller: "_handleNewMessageEvent");
 
     print("[_handleNewMessageEvent] -> messageDelivered for message $id");
@@ -323,7 +323,8 @@ class AppSocket {
     if (senderId != currentUserId) {
       if (chatStore.chatIdUsed == chatId) {
         print(
-            "[_handleNewMessageEvent] chatIdUsed=$chatId => auto read message $id");
+          "[_handleNewMessageEvent] chatIdUsed=$chatId => auto read message $id",
+        );
         sendMessageRead([id]);
         chatStore.updateMessageStatus(id, 2, null, DateTime.now().toLocal());
       } else {
@@ -331,12 +332,12 @@ class AppSocket {
       }
     } else {
       print(
-          "[_handleNewMessageEvent] This message is from current user => ignoring read logic");
+        "[_handleNewMessageEvent] This message is from current user => ignoring read logic",
+      );
     }
   }
 
   void _handleAllMessagesReadEvent(dynamic data) {
-    print("Handling all_messages_read event with data: $data");
     try {
       int chatId = data["chat_id"];
       String? readAtStr = data["read_at"];
@@ -359,7 +360,6 @@ class AppSocket {
 
   /// Обработчик события обновления статуса сообщения
   void _handleMessageStatusUpdateEvent(dynamic data) {
-    print("Handling message_status_update event with data: $data");
     try {
       final dynamic messageIdRaw = data["message_id"];
       final dynamic statusRaw = data["status"];
@@ -367,10 +367,12 @@ class AppSocket {
       final String? readAtStr = data["read_at"];
 
       // Парсим deliveredAt / readAt, если есть
-      final DateTime? deliveredAt =
-          deliveredAtStr != null ? parseUtcDateTime(deliveredAtStr) : null;
-      final DateTime? readAt =
-          readAtStr != null ? parseUtcDateTime(readAtStr) : null;
+      final DateTime? deliveredAt = deliveredAtStr != null
+          ? parseUtcDateTime(deliveredAtStr)
+          : null;
+      final DateTime? readAt = readAtStr != null
+          ? parseUtcDateTime(readAtStr)
+          : null;
 
       // Получаем messageId как int
       int messageId;
@@ -388,20 +390,25 @@ class AppSocket {
       // Для наглядности — выведем, какую иконку стоит показать
       if (status == 0) {
         print(
-            "message_status_update: message ID $messageId => status=0 (sent). Иконка: Icons.access_time");
+          "message_status_update: message ID $messageId => status=0 (sent). Иконка: Icons.access_time",
+        );
       } else if (status == 1) {
         print(
-            "message_status_update: message ID $messageId => status=1 (delivered). Иконка: Icons.check");
+          "message_status_update: message ID $messageId => status=1 (delivered). Иконка: Icons.check",
+        );
       } else if (status == 2) {
         print(
-            "message_status_update: message ID $messageId => status=2 (read). Иконка: Icons.done_all");
+          "message_status_update: message ID $messageId => status=2 (read). Иконка: Icons.done_all",
+        );
       } else {
         print(
-            "message_status_update: message ID $messageId => статус неизвестен. Иконка: Icons.access_time");
+          "message_status_update: message ID $messageId => статус неизвестен. Иконка: Icons.access_time",
+        );
       }
 
       print(
-          "Received message_status_update for message ID $messageId with status $status");
+        "Received message_status_update for message ID $messageId with status $status",
+      );
 
       // Вызываем обновление статуса в ChatStore
       // (учтёт, если новый статус > старого)
@@ -413,15 +420,14 @@ class AppSocket {
 
   /// Обработчик получения сообщений чата
   void _handleGetMessagesEvent(dynamic data) {
-    print("Socket Event: get_messages /// Data: $data");
     try {
       final chatId = data["chatId"] as int;
       final messagesData = data["messages"] as List<dynamic>;
-      print("Received messages: $messagesData");
 
       // Преобразуем List<dynamic> в List<Map<String, dynamic>>
-      List<Map<String, dynamic>> messages =
-          List<Map<String, dynamic>>.from(messagesData);
+      List<Map<String, dynamic>> messages = List<Map<String, dynamic>>.from(
+        messagesData,
+      );
 
       chatStore.addMessages(chatId, messages);
     } catch (e) {
@@ -440,7 +446,6 @@ class AppSocket {
         'recipient_id': message.recipientId, // Добавлено
     };
     _socket?.emit('send_message', data);
-    print("Sent send_message event with data: $data");
   }
 
   /// Метод для пометки сообщений как прочитанных
@@ -452,9 +457,11 @@ class AppSocket {
     final chat = chatStore.chats[chatId];
     if (chat != null) {
       List<int> messageIds = chat.messages
-          .where((message) =>
-              message.senderId != profileStore.userInfo!.id &&
-              message.status != 2)
+          .where(
+            (message) =>
+                message.senderId != profileStore.userInfo!.id &&
+                message.status != 2,
+          )
           .map((message) => message.id)
           .toList();
       if (messageIds.isNotEmpty) {
@@ -478,7 +485,6 @@ class AppSocket {
 
     // Отправляем событие на удаление чата через сокет
     _socket?.emit("delete_chat", data);
-    print("Sent delete_chat event with data: $data");
   }
 
   /// Метод для получения сообщений в чате
@@ -487,10 +493,7 @@ class AppSocket {
       print("Socket is not connected. Unable to get messages.");
       return;
     }
-    Map<String, dynamic> data = {
-      "chat_id": chatId,
-    };
-    print("Sent get_messages event with data: $data");
+    Map<String, dynamic> data = {"chat_id": chatId};
     _socket?.emit("get_messages", data);
   }
 
@@ -500,11 +503,8 @@ class AppSocket {
       print("Socket is not connected. Unable to send message delivered event.");
       return;
     }
-    Map<String, dynamic> data = {
-      "message_ids": messageIds,
-    };
+    Map<String, dynamic> data = {"message_ids": messageIds};
     _socket?.emit("message_delivered", data);
-    print("Sent message_delivered event with data: $data");
   }
 
   /// Метод для отправки подтверждения прочтения сообщений
@@ -513,11 +513,8 @@ class AppSocket {
       print("Socket is not connected. Unable to send message_read event.");
       return;
     }
-    Map<String, dynamic> data = {
-      "message_ids": messageIds,
-    };
+    Map<String, dynamic> data = {"message_ids": messageIds};
     _socket?.emit("message_read", data);
-    print("Sent message_read event with data: $data");
   }
 
   /// Получение текущего ID пользователя

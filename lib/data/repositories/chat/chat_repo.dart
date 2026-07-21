@@ -1,6 +1,5 @@
 // chat_store.dart
 
-
 import 'package:collection/collection.dart';
 import 'package:mobx/mobx.dart';
 import 'package:swipe_mobile_re/core/network/chat/chat_http.dart';
@@ -63,7 +62,7 @@ abstract class _ChatStore with Store {
   Future<int?> createChat(int recipientId) async {
     try {
       final chatId = await _chatHttp.createChat(recipientId);
-      if (chatId != null) {
+      if (chatId != -1) {
         setChatIdUsed(chatId);
         await getChatInfo(chatId, null);
       }
@@ -119,13 +118,16 @@ abstract class _ChatStore with Store {
 
   @action
   Future<void> sendMessage(Message mess) async {
-    print("[sendMessage] START with localId=${mess.localId}, "
-        "chatId=${mess.chatId}, content=${mess.content}");
+    print(
+      "[sendMessage] START with localId=${mess.localId}, "
+      "chatId=${mess.chatId}, content=${mess.content}",
+    );
 
     int? chatId = mess.chatId;
     if (chatId == null || !chats.containsKey(chatId)) {
       print(
-          "[sendMessage] Chat $chatId not in store, trying to create chat with recipientId=${mess.recipientId}");
+        "[sendMessage] Chat $chatId not in store, trying to create chat with recipientId=${mess.recipientId}",
+      );
       if (mess.recipientId == null) {
         print("[sendMessage] ERROR: recipientId is null, cannot proceed.");
         return;
@@ -133,34 +135,45 @@ abstract class _ChatStore with Store {
       chatId = await createChat(mess.recipientId!);
       if (chatId == null) {
         print(
-            "[sendMessage] ERROR: createChat() returned null for recipientId=${mess.recipientId}");
+          "[sendMessage] ERROR: createChat() returned null for recipientId=${mess.recipientId}",
+        );
         return;
       }
       mess.chatId = chatId;
     }
 
     // 1) Оптимистически добавляем
-    print("[sendMessage] Calling addMessage for localId=${mess.localId}, "
-        "id=${mess.id}, chatId=${mess.chatId}");
+    print(
+      "[sendMessage] Calling addMessage for localId=${mess.localId}, "
+      "id=${mess.id}, chatId=${mess.chatId}",
+    );
     addMessage(mess, caller: "sendMessage");
 
     // 2) Запоминаем localId
     localIdToExternalId[mess.localId] = -1;
 
     // 3) Отправляем сокету
-    print("[sendMessage] Emitting send_message to socket with "
-        "localId=${mess.localId}, chatId=${mess.chatId}");
+    print(
+      "[sendMessage] Emitting send_message to socket with "
+      "localId=${mess.localId}, chatId=${mess.chatId}",
+    );
     appSocket.sendMessage(mess);
 
     print("[sendMessage] END for localId=${mess.localId}, id=${mess.id}");
   }
 
   @action
-  void updateStatus(int chatId, int status, String externalMessageId, int id,
-      DateTime? createdAt) {
+  void updateStatus(
+    int chatId,
+    int status,
+    String externalMessageId,
+    int id,
+    DateTime? createdAt,
+  ) {
     print(
-        "[updateStatus] chatId=$chatId, externalMessageId=$externalMessageId, "
-        "newID=$id, newStatus=$status, createdAt=$createdAt");
+      "[updateStatus] chatId=$chatId, externalMessageId=$externalMessageId, "
+      "newID=$id, newStatus=$status, createdAt=$createdAt",
+    );
 
     final ChatInfo? chat = chats[chatId];
     if (chat == null) {
@@ -168,22 +181,26 @@ abstract class _ChatStore with Store {
       return;
     }
 
-    final message =
-        chat.messages.firstWhereOrNull((m) => m.localId == externalMessageId);
+    final message = chat.messages.firstWhereOrNull(
+      (m) => m.localId == externalMessageId,
+    );
     if (message == null) {
       print(
-          "[updateStatus] message with localId=$externalMessageId not found in chat $chatId!");
+        "[updateStatus] message with localId=$externalMessageId not found in chat $chatId!",
+      );
       for (var i = 0; i < chat.messages.length; i++) {
         final mm = chat.messages[i];
         print(
-            "   index=$i -> id=${mm.id}, localId=${mm.localId}, status=${mm.status}");
+          "   index=$i -> id=${mm.id}, localId=${mm.localId}, status=${mm.status}",
+        );
       }
       return;
     }
 
     print(
-        "[updateStatus] Found message id=${message.id}, localId=${message.localId}, "
-        "oldStatus=${message.status}. Updating...");
+      "[updateStatus] Found message id=${message.id}, localId=${message.localId}, "
+      "oldStatus=${message.status}. Updating...",
+    );
     message.status = status;
     message.id = id;
     if (createdAt != null) {
@@ -194,21 +211,25 @@ abstract class _ChatStore with Store {
 
   @action
   void addMessage(Message mess, {String caller = ""}) {
-    print("[addMessage $caller] Called with id=${mess.id}, "
-        "localId=${mess.localId}, chatId=${mess.chatId}, "
-        "status=${mess.status}");
+    print(
+      "[addMessage $caller] Called with id=${mess.id}, "
+      "localId=${mess.localId}, chatId=${mess.chatId}, "
+      "status=${mess.status}",
+    );
 
     final chatId = mess.chatId;
     if (chatId == null || !chats.containsKey(chatId)) {
       print(
-          "[addMessage $caller] ERROR: chatId is null or Chat $chatId not found.");
+        "[addMessage $caller] ERROR: chatId is null or Chat $chatId not found.",
+      );
       return;
     }
 
     final chat = chats[chatId];
     if (chat == null) {
       print(
-          "[addMessage $caller] ERROR: chat object is null for chatId=$chatId.");
+        "[addMessage $caller] ERROR: chat object is null for chatId=$chatId.",
+      );
       return;
     }
 
@@ -217,30 +238,37 @@ abstract class _ChatStore with Store {
     for (var i = 0; i < chat.messages.length; i++) {
       final m = chat.messages[i];
       print(
-          "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}");
+        "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}",
+      );
     }
 
     // Проверяем, нет ли такого же localId
-    final existingIndex =
-        chat.messages.indexWhere((m) => m.localId == mess.localId);
+    final existingIndex = chat.messages.indexWhere(
+      (m) => m.localId == mess.localId,
+    );
     if (existingIndex != -1) {
       print(
-          "[addMessage $caller] Found existing message at index=$existingIndex "
-          "with same localId=${mess.localId}. Updating...");
+        "[addMessage $caller] Found existing message at index=$existingIndex "
+        "with same localId=${mess.localId}. Updating...",
+      );
       chat.messages[existingIndex] = mess;
     } else {
       print(
-          "[addMessage $caller] localId=${mess.localId} not found. Trying to match by ID...");
+        "[addMessage $caller] localId=${mess.localId} not found. Trying to match by ID...",
+      );
       // Если id != -1, тоже можно проверять
-      final existingByIdIndex = chat.messages
-          .indexWhere((m) => m.id == mess.id && m.id != -1 && mess.id != -1);
+      final existingByIdIndex = chat.messages.indexWhere(
+        (m) => m.id == mess.id && m.id != -1 && mess.id != -1,
+      );
       if (existingByIdIndex != -1) {
         print(
-            "[addMessage $caller] Found existing message by ID at index=$existingByIdIndex -> id=${mess.id}. Updating...");
+          "[addMessage $caller] Found existing message by ID at index=$existingByIdIndex -> id=${mess.id}. Updating...",
+        );
         chat.messages[existingByIdIndex] = mess;
       } else {
         print(
-            "[addMessage $caller] No existing message found, adding new message to chat $chatId.");
+          "[addMessage $caller] No existing message found, adding new message to chat $chatId.",
+        );
         chat.messages.add(mess);
       }
     }
@@ -250,7 +278,8 @@ abstract class _ChatStore with Store {
     for (var i = 0; i < chat.messages.length; i++) {
       final m = chat.messages[i];
       print(
-          "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}");
+        "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}",
+      );
     }
   }
 
@@ -276,7 +305,8 @@ abstract class _ChatStore with Store {
         // 1) Если chatId уже совпадает, нет смысла добавлять заново
         if (oldChatId == newChatId) {
           print(
-              "[updateChatId] message already in chat $newChatId, skip re-adding");
+            "[updateChatId] message already in chat $newChatId, skip re-adding",
+          );
           break;
         }
 
@@ -288,20 +318,24 @@ abstract class _ChatStore with Store {
           final newChat = chats[newChatId]!;
 
           // Проверяем, нет ли уже этого сообщения в новом чате по localId
-          final existingIndex =
-              newChat.messages.indexWhere((m) => m.localId == message.localId);
+          final existingIndex = newChat.messages.indexWhere(
+            (m) => m.localId == message.localId,
+          );
           if (existingIndex >= 0) {
             print(
-                "[updateChatId] message with localId=$externalMessageId already in chat $newChatId, skipping add.");
+              "[updateChatId] message with localId=$externalMessageId already in chat $newChatId, skipping add.",
+            );
           } else {
             newChat.messages.add(message);
             print(
-                "[updateChatId] message with localId=$externalMessageId added to chat $newChatId");
+              "[updateChatId] message with localId=$externalMessageId added to chat $newChatId",
+            );
           }
         } else {
           // Если чата ещё нет, создаём его (редкий случай, когда было chatId=-1)
           print(
-              "[updateChatId] newChatId=$newChatId not found, creating new chat in store...");
+            "[updateChatId] newChatId=$newChatId not found, creating new chat in store...",
+          );
           final newChat = ChatInfo(
             chatId: newChatId,
             user: UserInChat(
@@ -310,7 +344,7 @@ abstract class _ChatStore with Store {
               userAge: 0,
               avatarUrl: null,
               status: 'offline',
-              hasSubscription: true
+              hasSubscription: true,
             ),
             createdAt: DateTime.now().toString(),
             lastMessage: message.content,
@@ -319,11 +353,13 @@ abstract class _ChatStore with Store {
           );
           chats[newChatId] = newChat;
           print(
-              "[updateChatId] Created new chat with ID $newChatId and added message.");
+            "[updateChatId] Created new chat with ID $newChatId and added message.",
+          );
         }
 
         print(
-            "[updateChatId] Updated message localId=$externalMessageId from chat $oldChatId to chat $newChatId");
+          "[updateChatId] Updated message localId=$externalMessageId from chat $oldChatId to chat $newChatId",
+        );
         break; // Прекращаем, так как нашли нужное сообщение
       }
     }
@@ -360,7 +396,8 @@ abstract class _ChatStore with Store {
           message.status = 2;
           message.readAt = readAt;
           print(
-              "Сообщение ${message.id} помечено как прочитанное с датой $readAt.");
+            "Сообщение ${message.id} помечено как прочитанное с датой $readAt.",
+          );
         }
       }
       // Нет необходимости пересоздавать коллекции
@@ -374,12 +411,15 @@ abstract class _ChatStore with Store {
       final currentUserId = profileStore.userInfo?.id;
       if (currentUserId != null) {
         final unreadMessages = chat.messages
-            .where((message) =>
-                message.status < 2 && message.senderId != currentUserId)
+            .where(
+              (message) =>
+                  message.status < 2 && message.senderId != currentUserId,
+            )
             .length;
         chat.unreadCount = unreadMessages;
         print(
-            "Updated unread message count for chat ID $chatId: ${chat.unreadCount}");
+          "Updated unread message count for chat ID $chatId: ${chat.unreadCount}",
+        );
       } else {
         chat.unreadCount = 0;
       }
@@ -388,9 +428,14 @@ abstract class _ChatStore with Store {
 
   @action
   void updateMessageStatus(
-      int messageId, int status, DateTime? deliveredAt, DateTime? readAt) {
+    int messageId,
+    int status,
+    DateTime? deliveredAt,
+    DateTime? readAt,
+  ) {
     print(
-        "Called updateMessageStatus for messageId: $messageId, status: $status");
+      "Called updateMessageStatus for messageId: $messageId, status: $status",
+    );
     for (var chat in chats.values) {
       final Message? message = chat.messages.firstWhereOrNull(
         (element) =>
@@ -400,7 +445,8 @@ abstract class _ChatStore with Store {
         if (status > message.status) {
           final oldStatus = message.status;
           print(
-              "Updating Message ID ${message.id} from status ${message.status} to $status");
+            "Updating Message ID ${message.id} from status ${message.status} to $status",
+          );
           message.status = status;
           if (deliveredAt != null) {
             message.deliveredAt = deliveredAt;
@@ -409,7 +455,8 @@ abstract class _ChatStore with Store {
             message.readAt = readAt;
           }
           print(
-              "Message ID ${message.id} updated: status=$status, deliveredAt=$deliveredAt, readAt=$readAt");
+            "Message ID ${message.id} updated: status=$status, deliveredAt=$deliveredAt, readAt=$readAt",
+          );
           // Корректируем unreadCount, если сообщение стало прочитанным
           if (message.senderId != profileStore.userInfo?.id) {
             if (oldStatus < 2 && status >= 2) {
@@ -419,13 +466,15 @@ abstract class _ChatStore with Store {
                 chat.unreadCount -= 1;
                 if (chat.unreadCount < 0) chat.unreadCount = 0;
                 print(
-                    "Decremented unreadCount for chat ID $chatId to ${chat.unreadCount}");
+                  "Decremented unreadCount for chat ID $chatId to ${chat.unreadCount}",
+                );
               }
             }
           }
         } else {
           print(
-              "Ignoring status update for Message ID ${message.id}: new status $status is not higher than current status ${message.status}");
+            "Ignoring status update for Message ID ${message.id}: new status $status is not higher than current status ${message.status}",
+          );
         }
         return;
       }
@@ -436,7 +485,8 @@ abstract class _ChatStore with Store {
   @action
   void addMessages(int chatId, List<Map<String, dynamic>> messagesData) {
     print(
-        "[addMessages] Called with chatId=$chatId, messagesData.length=${messagesData.length}");
+      "[addMessages] Called with chatId=$chatId, messagesData.length=${messagesData.length}",
+    );
     final ChatInfo? chat = chats[chatId];
     if (chat == null) {
       print("[addMessages] ERROR: no chat in store for chatId=$chatId");
@@ -448,31 +498,34 @@ abstract class _ChatStore with Store {
       final message = Message.fromJson(Map<String, dynamic>.from(msgData));
 
       // Проверка localId, если есть
-      if (message.localId != null) {
-        final existingIdxLocal =
-            chat.messages.indexWhere((m) => m.localId == message.localId);
-        if (existingIdxLocal != -1) {
-          print(
-              "[addMessages] Found existing by localId=${message.localId} at index=$existingIdxLocal -> updating...");
-          chat.messages[existingIdxLocal] = message;
-          continue;
-        }
+      final existingIdxLocal = chat.messages.indexWhere(
+        (m) => m.localId == message.localId,
+      );
+      if (existingIdxLocal != -1) {
+        print(
+          "[addMessages] Found existing by localId=${message.localId} at index=$existingIdxLocal -> updating...",
+        );
+        chat.messages[existingIdxLocal] = message;
+        continue;
       }
 
       // Проверка ID, если не -1
       if (message.id != -1) {
-        final existingIdxId =
-            chat.messages.indexWhere((m) => m.id == message.id);
+        final existingIdxId = chat.messages.indexWhere(
+          (m) => m.id == message.id,
+        );
         if (existingIdxId != -1) {
           print(
-              "[addMessages] Found existing by id=${message.id} at index=$existingIdxId -> updating...");
+            "[addMessages] Found existing by id=${message.id} at index=$existingIdxId -> updating...",
+          );
           chat.messages[existingIdxId] = message;
           continue;
         }
       }
 
       print(
-          "[addMessages] No existing found, adding new ID=${message.id}, localId=${message.localId}");
+        "[addMessages] No existing found, adding new ID=${message.id}, localId=${message.localId}",
+      );
       chat.messages.add(message);
     }
 
@@ -481,7 +534,8 @@ abstract class _ChatStore with Store {
     for (var i = 0; i < chat.messages.length; i++) {
       final m = chat.messages[i];
       print(
-          "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}");
+        "   index=$i -> id=${m.id}, localId=${m.localId}, status=${m.status}",
+      );
     }
 
     // updateUnreadMessageCount(chatId); // или что нужно
@@ -525,7 +579,6 @@ abstract class _ChatStore with Store {
     return null;
   }
 }
-
 
 // Объявляем Singleton экземпляр
 final ChatStore chatStore = ChatStore();

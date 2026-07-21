@@ -12,12 +12,15 @@ mixin _$ChatStore on _ChatStore, Store {
   Computed<int?>? _$chatIdUsedComputed;
 
   @override
-  int? get chatIdUsed => (_$chatIdUsedComputed ??=
-          Computed<int?>(() => super.chatIdUsed, name: '_ChatStore.chatIdUsed'))
-      .value;
+  int? get chatIdUsed => (_$chatIdUsedComputed ??= Computed<int?>(
+    () => super.chatIdUsed,
+    name: '_ChatStore.chatIdUsed',
+  )).value;
 
-  late final _$_chatIdUsedAtom =
-      Atom(name: '_ChatStore._chatIdUsed', context: context);
+  late final _$_chatIdUsedAtom = Atom(
+    name: '_ChatStore._chatIdUsed',
+    context: context,
+  );
 
   @override
   int? get _chatIdUsed {
@@ -47,8 +50,10 @@ mixin _$ChatStore on _ChatStore, Store {
     });
   }
 
-  late final _$notificationsEnabledAtom =
-      Atom(name: '_ChatStore.notificationsEnabled', context: context);
+  late final _$notificationsEnabledAtom = Atom(
+    name: '_ChatStore.notificationsEnabled',
+    context: context,
+  );
 
   @override
   ObservableMap<int, bool> get notificationsEnabled {
@@ -58,14 +63,19 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   set notificationsEnabled(ObservableMap<int, bool> value) {
-    _$notificationsEnabledAtom.reportWrite(value, super.notificationsEnabled,
-        () {
-      super.notificationsEnabled = value;
-    });
+    _$notificationsEnabledAtom.reportWrite(
+      value,
+      super.notificationsEnabled,
+      () {
+        super.notificationsEnabled = value;
+      },
+    );
   }
 
-  late final _$localIdToExternalIdAtom =
-      Atom(name: '_ChatStore.localIdToExternalId', context: context);
+  late final _$localIdToExternalIdAtom = Atom(
+    name: '_ChatStore.localIdToExternalId',
+    context: context,
+  );
 
   @override
   Map<String, int> get localIdToExternalId {
@@ -80,53 +90,66 @@ mixin _$ChatStore on _ChatStore, Store {
     });
   }
 
-  late final _$createChatAsyncAction =
-      AsyncAction('_ChatStore.createChat', context: context);
+  late final _$createChatAsyncAction = AsyncAction(
+    '_ChatStore.createChat',
+    context: context,
+  );
 
   @override
   Future<int?> createChat(int recipientId) {
     return _$createChatAsyncAction.run(() => super.createChat(recipientId));
   }
 
-  late final _$getChatsAsyncAction =
-      AsyncAction('_ChatStore.getChats', context: context);
+  late final _$getChatsAsyncAction = AsyncAction(
+    '_ChatStore.getChats',
+    context: context,
+  );
 
   @override
   Future<void> getChats() {
     return _$getChatsAsyncAction.run(() => super.getChats());
   }
 
-  late final _$getChatInfoAsyncAction =
-      AsyncAction('_ChatStore.getChatInfo', context: context);
+  late final _$getChatInfoAsyncAction = AsyncAction(
+    '_ChatStore.getChatInfo',
+    context: context,
+  );
 
   @override
   Future<void> getChatInfo(int chatId, Message? mess) {
     return _$getChatInfoAsyncAction.run(() => super.getChatInfo(chatId, mess));
   }
 
-  late final _$sendMessageAsyncAction =
-      AsyncAction('_ChatStore.sendMessage', context: context);
+  late final _$sendMessageAsyncAction = AsyncAction(
+    '_ChatStore.sendMessage',
+    context: context,
+  );
 
   @override
   Future<void> sendMessage(Message mess) {
     return _$sendMessageAsyncAction.run(() => super.sendMessage(mess));
   }
 
-  late final _$clearRepositoryAsyncAction =
-      AsyncAction('_ChatStore.clearRepository', context: context);
+  late final _$clearRepositoryAsyncAction = AsyncAction(
+    '_ChatStore.clearRepository',
+    context: context,
+  );
 
   @override
   Future<void> clearRepository() {
     return _$clearRepositoryAsyncAction.run(() => super.clearRepository());
   }
 
-  late final _$_ChatStoreActionController =
-      ActionController(name: '_ChatStore', context: context);
+  late final _$_ChatStoreActionController = ActionController(
+    name: '_ChatStore',
+    context: context,
+  );
 
   @override
   void setChatIdUsed(int? value) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.setChatIdUsed');
+      name: '_ChatStore.setChatIdUsed',
+    );
     try {
       return super.setChatIdUsed(value);
     } finally {
@@ -137,7 +160,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   bool toggleNotifications(int chatId) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.toggleNotifications');
+      name: '_ChatStore.toggleNotifications',
+    );
     try {
       return super.toggleNotifications(chatId);
     } finally {
@@ -147,8 +171,9 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   void deleteChat(int chatId) {
-    final _$actionInfo =
-        _$_ChatStoreActionController.startAction(name: '_ChatStore.deleteChat');
+    final _$actionInfo = _$_ChatStoreActionController.startAction(
+      name: '_ChatStore.deleteChat',
+    );
     try {
       return super.deleteChat(chatId);
     } finally {
@@ -158,8 +183,9 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   void hideChat(int chatId) {
-    final _$actionInfo =
-        _$_ChatStoreActionController.startAction(name: '_ChatStore.hideChat');
+    final _$actionInfo = _$_ChatStoreActionController.startAction(
+      name: '_ChatStore.hideChat',
+    );
     try {
       return super.hideChat(chatId);
     } finally {
@@ -168,13 +194,24 @@ mixin _$ChatStore on _ChatStore, Store {
   }
 
   @override
-  void updateStatus(int chatId, int status, String externalMessageId, int id,
-      DateTime? createdAt) {
+  void updateStatus(
+    int chatId,
+    int status,
+    String externalMessageId,
+    int id,
+    DateTime? createdAt,
+  ) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.updateStatus');
+      name: '_ChatStore.updateStatus',
+    );
     try {
-      return super
-          .updateStatus(chatId, status, externalMessageId, id, createdAt);
+      return super.updateStatus(
+        chatId,
+        status,
+        externalMessageId,
+        id,
+        createdAt,
+      );
     } finally {
       _$_ChatStoreActionController.endAction(_$actionInfo);
     }
@@ -182,8 +219,9 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   void addMessage(Message mess, {String caller = ""}) {
-    final _$actionInfo =
-        _$_ChatStoreActionController.startAction(name: '_ChatStore.addMessage');
+    final _$actionInfo = _$_ChatStoreActionController.startAction(
+      name: '_ChatStore.addMessage',
+    );
     try {
       return super.addMessage(mess, caller: caller);
     } finally {
@@ -194,7 +232,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void _handleDeleteChatEvent(dynamic data) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore._handleDeleteChatEvent');
+      name: '_ChatStore._handleDeleteChatEvent',
+    );
     try {
       return super._handleDeleteChatEvent(data);
     } finally {
@@ -205,7 +244,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void updateChatId(String externalMessageId, int newChatId) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.updateChatId');
+      name: '_ChatStore.updateChatId',
+    );
     try {
       return super.updateChatId(externalMessageId, newChatId);
     } finally {
@@ -216,7 +256,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void readMessages(int chatId) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.readMessages');
+      name: '_ChatStore.readMessages',
+    );
     try {
       return super.readMessages(chatId);
     } finally {
@@ -226,8 +267,9 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   void allRead(int chatId, DateTime? readAt) {
-    final _$actionInfo =
-        _$_ChatStoreActionController.startAction(name: '_ChatStore.allRead');
+    final _$actionInfo = _$_ChatStoreActionController.startAction(
+      name: '_ChatStore.allRead',
+    );
     try {
       return super.allRead(chatId, readAt);
     } finally {
@@ -238,7 +280,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void updateUnreadMessageCount(int chatId) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.updateUnreadMessageCount');
+      name: '_ChatStore.updateUnreadMessageCount',
+    );
     try {
       return super.updateUnreadMessageCount(chatId);
     } finally {
@@ -248,9 +291,14 @@ mixin _$ChatStore on _ChatStore, Store {
 
   @override
   void updateMessageStatus(
-      int messageId, int status, DateTime? deliveredAt, DateTime? readAt) {
+    int messageId,
+    int status,
+    DateTime? deliveredAt,
+    DateTime? readAt,
+  ) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.updateMessageStatus');
+      name: '_ChatStore.updateMessageStatus',
+    );
     try {
       return super.updateMessageStatus(messageId, status, deliveredAt, readAt);
     } finally {
@@ -261,7 +309,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void addMessages(int chatId, List<Map<String, dynamic>> messagesData) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.addMessages');
+      name: '_ChatStore.addMessages',
+    );
     try {
       return super.addMessages(chatId, messagesData);
     } finally {
@@ -272,7 +321,8 @@ mixin _$ChatStore on _ChatStore, Store {
   @override
   void markMessagesAsRead(int chatId, List<int> messageIds) {
     final _$actionInfo = _$_ChatStoreActionController.startAction(
-        name: '_ChatStore.markMessagesAsRead');
+      name: '_ChatStore.markMessagesAsRead',
+    );
     try {
       return super.markMessagesAsRead(chatId, messageIds);
     } finally {

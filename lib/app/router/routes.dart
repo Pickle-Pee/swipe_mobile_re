@@ -1,5 +1,6 @@
 class Routes {
   static const onboarding = '/onboarding';
+  static const authPhone = '/auth/phone';
   static const register = '/register';
   static const discover = '/discover';
   static const chats = '/chats';

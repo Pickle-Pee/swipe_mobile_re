@@ -21,7 +21,7 @@ class GlassTabBar extends StatelessWidget {
       child: GlassSurface(
         radius: 30,
         // Чуть меньше padding, как в TG
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical:5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         // Для тёмной подложки “стекло” лучше не белое, а дымчатое:
         backgroundColor: AppTokens.surface.withOpacity(0.18),
         borderColor: Colors.white.withOpacity(0.08),

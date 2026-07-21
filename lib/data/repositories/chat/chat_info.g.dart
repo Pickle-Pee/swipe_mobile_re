@@ -39,8 +39,10 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$createdAtAtom =
-      Atom(name: '_ChatInfo.createdAt', context: context);
+  late final _$createdAtAtom = Atom(
+    name: '_ChatInfo.createdAt',
+    context: context,
+  );
 
   @override
   String? get createdAt {
@@ -55,8 +57,10 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$lastMessageAtom =
-      Atom(name: '_ChatInfo.lastMessage', context: context);
+  late final _$lastMessageAtom = Atom(
+    name: '_ChatInfo.lastMessage',
+    context: context,
+  );
 
   @override
   String? get lastMessage {
@@ -71,8 +75,10 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$messagesAtom =
-      Atom(name: '_ChatInfo.messages', context: context);
+  late final _$messagesAtom = Atom(
+    name: '_ChatInfo.messages',
+    context: context,
+  );
 
   @override
   ObservableList<Message> get messages {
@@ -87,8 +93,10 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$unreadCountAtom =
-      Atom(name: '_ChatInfo.unreadCount', context: context);
+  late final _$unreadCountAtom = Atom(
+    name: '_ChatInfo.unreadCount',
+    context: context,
+  );
 
   @override
   int get unreadCount {
@@ -103,8 +111,10 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$isHiddenAtom =
-      Atom(name: '_ChatInfo.isHidden', context: context);
+  late final _$isHiddenAtom = Atom(
+    name: '_ChatInfo.isHidden',
+    context: context,
+  );
 
   @override
   bool get isHidden {
@@ -119,13 +129,16 @@ mixin _$ChatInfo on _ChatInfo, Store {
     });
   }
 
-  late final _$_ChatInfoActionController =
-      ActionController(name: '_ChatInfo', context: context);
+  late final _$_ChatInfoActionController = ActionController(
+    name: '_ChatInfo',
+    context: context,
+  );
 
   @override
   void addMessage(Message message) {
-    final _$actionInfo =
-        _$_ChatInfoActionController.startAction(name: '_ChatInfo.addMessage');
+    final _$actionInfo = _$_ChatInfoActionController.startAction(
+      name: '_ChatInfo.addMessage',
+    );
     try {
       return super.addMessage(message);
     } finally {
@@ -136,7 +149,8 @@ mixin _$ChatInfo on _ChatInfo, Store {
   @override
   void updateMessage(Message message) {
     final _$actionInfo = _$_ChatInfoActionController.startAction(
-        name: '_ChatInfo.updateMessage');
+      name: '_ChatInfo.updateMessage',
+    );
     try {
       return super.updateMessage(message);
     } finally {
@@ -147,7 +161,8 @@ mixin _$ChatInfo on _ChatInfo, Store {
   @override
   void markAllMessagesAsRead(DateTime? readAt) {
     final _$actionInfo = _$_ChatInfoActionController.startAction(
-        name: '_ChatInfo.markAllMessagesAsRead');
+      name: '_ChatInfo.markAllMessagesAsRead',
+    );
     try {
       return super.markAllMessagesAsRead(readAt);
     } finally {
@@ -157,8 +172,9 @@ mixin _$ChatInfo on _ChatInfo, Store {
 
   @override
   void hideChat() {
-    final _$actionInfo =
-        _$_ChatInfoActionController.startAction(name: '_ChatInfo.hideChat');
+    final _$actionInfo = _$_ChatInfoActionController.startAction(
+      name: '_ChatInfo.hideChat',
+    );
     try {
       return super.hideChat();
     } finally {
@@ -168,8 +184,9 @@ mixin _$ChatInfo on _ChatInfo, Store {
 
   @override
   void unhideChat() {
-    final _$actionInfo =
-        _$_ChatInfoActionController.startAction(name: '_ChatInfo.unhideChat');
+    final _$actionInfo = _$_ChatInfoActionController.startAction(
+      name: '_ChatInfo.unhideChat',
+    );
     try {
       return super.unhideChat();
     } finally {
