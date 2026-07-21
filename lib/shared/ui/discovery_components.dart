@@ -22,21 +22,27 @@ class ProfileMediaCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (imageProvider == null)
-            const _MissingProfileMedia()
-          else
-            Image(
-              image: imageProvider!,
-              fit: BoxFit.cover,
-              semanticLabel: semanticLabel,
-              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                if (wasSynchronouslyLoaded || frame != null) return child;
-                return const SkeletonLoader(radius: AppTokens.radiusXLarge);
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const _MissingProfileMedia();
-              },
-            ),
+          RepaintBoundary(
+            child: imageProvider == null
+                ? const _MissingProfileMedia()
+                : Image(
+                    image: imageProvider!,
+                    fit: BoxFit.cover,
+                    semanticLabel: semanticLabel,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                          if (wasSynchronouslyLoaded || frame != null) {
+                            return child;
+                          }
+                          return const SkeletonLoader(
+                            radius: AppTokens.radiusXLarge,
+                          );
+                        },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const _MissingProfileMedia();
+                    },
+                  ),
+          ),
           overlay,
         ],
       ),
