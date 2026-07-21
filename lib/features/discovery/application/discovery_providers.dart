@@ -6,11 +6,15 @@ import '../domain/discovery_repository.dart';
 
 enum DiscoveryStatus { initial, loading, data, empty, error }
 
+enum DiscoveryEmptyReason { noProfiles, endOfFeed }
+
 class DiscoveryState {
   const DiscoveryState({
     this.status = DiscoveryStatus.initial,
     this.profiles = const [],
-    this.isProcessing = false,
+    this.processingReaction,
+    this.failedReaction,
+    this.emptyReason,
     this.error,
     this.lastReaction,
     this.matchedProfile,
@@ -18,12 +22,15 @@ class DiscoveryState {
 
   final DiscoveryStatus status;
   final List<DiscoveryProfile> profiles;
-  final bool isProcessing;
+  final DiscoveryReaction? processingReaction;
+  final DiscoveryReaction? failedReaction;
+  final DiscoveryEmptyReason? emptyReason;
   final Object? error;
   final DiscoveryReactionResult? lastReaction;
   final DiscoveryProfile? matchedProfile;
 
   DiscoveryProfile? get current => profiles.isEmpty ? null : profiles.first;
+  bool get isProcessing => processingReaction != null;
 }
 
 final discoveryRepositoryProvider = Provider<DiscoveryRepository>((ref) {
@@ -45,17 +52,20 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     state = DiscoveryState(
       status: DiscoveryStatus.loading,
       profiles: state.profiles,
+      emptyReason: state.emptyReason,
     );
     try {
       final profiles = await _repository.getProfiles();
       state = DiscoveryState(
         status: profiles.isEmpty ? DiscoveryStatus.empty : DiscoveryStatus.data,
         profiles: profiles,
+        emptyReason: profiles.isEmpty ? DiscoveryEmptyReason.noProfiles : null,
       );
     } on Object catch (error) {
       state = DiscoveryState(
         status: DiscoveryStatus.error,
         profiles: state.profiles,
+        emptyReason: state.emptyReason,
         error: error,
       );
     }
@@ -64,13 +74,20 @@ class DiscoveryController extends Notifier<DiscoveryState> {
   Future<void> like() => _react(DiscoveryReaction.like);
   Future<void> pass() => _react(DiscoveryReaction.pass);
 
+  Future<void> retryReaction() async {
+    final reaction = state.failedReaction;
+    if (reaction != null) await _react(reaction);
+  }
+
   Future<void> _react(DiscoveryReaction reaction) async {
     final current = state.current;
     if (current == null || state.isProcessing) return;
     state = DiscoveryState(
-      status: state.status,
+      status: DiscoveryStatus.data,
       profiles: state.profiles,
-      isProcessing: true,
+      processingReaction: reaction,
+      emptyReason: state.emptyReason,
+      lastReaction: state.lastReaction,
     );
     try {
       final result = await _repository.react(current.id, reaction);
@@ -80,6 +97,7 @@ class DiscoveryController extends Notifier<DiscoveryState> {
             ? DiscoveryStatus.empty
             : DiscoveryStatus.data,
         profiles: remaining,
+        emptyReason: remaining.isEmpty ? DiscoveryEmptyReason.endOfFeed : null,
         lastReaction: result,
         matchedProfile: result.isMatch ? current : null,
       );
@@ -87,7 +105,10 @@ class DiscoveryController extends Notifier<DiscoveryState> {
       state = DiscoveryState(
         status: DiscoveryStatus.error,
         profiles: state.profiles,
+        failedReaction: reaction,
+        emptyReason: state.emptyReason,
         error: error,
+        lastReaction: state.lastReaction,
       );
     }
   }
@@ -96,7 +117,9 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     state = DiscoveryState(
       status: state.status,
       profiles: state.profiles,
-      isProcessing: state.isProcessing,
+      processingReaction: state.processingReaction,
+      failedReaction: state.failedReaction,
+      emptyReason: state.emptyReason,
       error: state.error,
       lastReaction: state.lastReaction,
     );
