@@ -567,18 +567,14 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
   }) {
     final messages = [...state.messages];
     for (final addition in additions) {
-      final index = messages.indexWhere(
-        (item) =>
-            (addition.id != null && item.id == addition.id) ||
-            item.localId == addition.localId,
-      );
+      final index = _mergeIndex(messages, addition);
       if (index < 0) {
         messages.add(addition);
       } else {
-        messages[index] = addition;
+        messages[index] = _mergeMessage(messages[index], addition);
       }
     }
-    messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    messages.sort(_compareMessages);
     state = state.copyWith(
       messages: messages,
       initialLoading: initialLoading,
@@ -596,13 +592,76 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
     bool? isSending,
     bool clearError = false,
   }) {
+    final messages = [
+      for (final message in state.messages)
+        if (message.localId == localId) replacement else message,
+    ]..sort(_compareMessages);
     state = state.copyWith(
-      messages: [
-        for (final message in state.messages)
-          if (message.localId == localId) replacement else message,
-      ],
+      messages: messages,
       isSending: isSending,
       error: clearError ? null : _stateUnset,
+    );
+  }
+
+  int _mergeIndex(List<ChatMessage> messages, ChatMessage addition) {
+    final exactIndex = messages.indexWhere(
+      (item) =>
+          (addition.id != null && item.id == addition.id) ||
+          item.localId == addition.localId,
+    );
+    if (exactIndex >= 0 || addition.id == null) return exactIndex;
+
+    var bestIndex = -1;
+    var bestDifference = const Duration(minutes: 2);
+    for (var index = 0; index < messages.length; index++) {
+      final candidate = messages[index];
+      if (!_canReconcileOptimistic(candidate, addition)) continue;
+      final difference = candidate.createdAt
+          .difference(addition.createdAt)
+          .abs();
+      if (difference <= bestDifference) {
+        bestDifference = difference;
+        bestIndex = index;
+      }
+    }
+    return bestIndex;
+  }
+
+  bool _canReconcileOptimistic(
+    ChatMessage candidate,
+    ChatMessage serverMessage,
+  ) {
+    if (candidate.id != null ||
+        (candidate.status != ChatMessageStatus.sending &&
+            candidate.status != ChatMessageStatus.failed)) {
+      return false;
+    }
+    return candidate.chatId == serverMessage.chatId &&
+        candidate.senderId == serverMessage.senderId &&
+        candidate.text == serverMessage.text &&
+        candidate.type == serverMessage.type &&
+        _sameStrings(candidate.mediaUrls, serverMessage.mediaUrls);
+  }
+
+  ChatMessage _mergeMessage(ChatMessage current, ChatMessage incoming) {
+    final currentHasClientId = current.localId != 'server-${current.id}';
+    final incomingHasClientId = incoming.localId != 'server-${incoming.id}';
+    final localId = currentHasClientId
+        ? current.localId
+        : incomingHasClientId
+        ? incoming.localId
+        : current.localId;
+    return ChatMessage(
+      id: incoming.id ?? current.id,
+      localId: localId,
+      chatId: incoming.chatId,
+      senderId: incoming.senderId,
+      text: incoming.text,
+      status: _strongerStatus(current.status, incoming.status),
+      createdAt: incoming.createdAt,
+      type: incoming.type,
+      mediaUrls: incoming.mediaUrls,
+      voiceData: incoming.voiceData,
     );
   }
 }
@@ -632,3 +691,43 @@ ChatMessageStatus _status(Object? value) =>
       '0' || 'sent' => ChatMessageStatus.sent,
       _ => ChatMessageStatus.sent,
     };
+
+bool _sameStrings(List<String> first, List<String> second) {
+  if (first.length != second.length) return false;
+  for (var index = 0; index < first.length; index++) {
+    if (first[index] != second[index]) return false;
+  }
+  return true;
+}
+
+int _compareMessages(ChatMessage first, ChatMessage second) {
+  final timestamp = first.createdAt.compareTo(second.createdAt);
+  if (timestamp != 0) return timestamp;
+  if (first.id != null && second.id != null) {
+    return first.id!.compareTo(second.id!);
+  }
+  if (first.id != null) return -1;
+  if (second.id != null) return 1;
+  return first.localId.compareTo(second.localId);
+}
+
+ChatMessageStatus _strongerStatus(
+  ChatMessageStatus current,
+  ChatMessageStatus incoming,
+) {
+  if ((current == ChatMessageStatus.sending ||
+          current == ChatMessageStatus.failed) &&
+      incoming != ChatMessageStatus.sending &&
+      incoming != ChatMessageStatus.failed) {
+    return incoming;
+  }
+  return _statusRank(incoming) >= _statusRank(current) ? incoming : current;
+}
+
+int _statusRank(ChatMessageStatus status) => switch (status) {
+  ChatMessageStatus.failed => -2,
+  ChatMessageStatus.sending => -1,
+  ChatMessageStatus.sent => 0,
+  ChatMessageStatus.delivered => 1,
+  ChatMessageStatus.read => 2,
+};

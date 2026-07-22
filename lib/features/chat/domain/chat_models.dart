@@ -103,11 +103,12 @@ class ChatMessage {
 
   ChatMessage copyWith({
     int? id,
+    String? localId,
     ChatMessageStatus? status,
     DateTime? createdAt,
   }) => ChatMessage(
     id: id ?? this.id,
-    localId: localId,
+    localId: localId ?? this.localId,
     chatId: chatId,
     senderId: senderId,
     text: text,
