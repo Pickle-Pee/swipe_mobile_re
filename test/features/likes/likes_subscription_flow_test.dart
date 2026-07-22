@@ -289,10 +289,24 @@ class FlowPublicProfileRepository implements PublicProfileRepository {
 
 class FlowProfileRepository implements ProfileRepository {
   @override
+  Future<UserProfile> deletePhoto(
+    int photoId, {
+    bool wasAvatar = false,
+  }) async => flowCurrentProfile;
+
+  @override
+  Future<ProfileEditCatalog> getEditCatalog() async =>
+      const ProfileEditCatalog();
+
+  @override
   Future<UserProfile> getCurrentProfile() async => flowCurrentProfile;
 
   @override
   Future<UserProfile> setAvatar(int photoId) async => flowCurrentProfile;
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) async =>
+      flowCurrentProfile;
 
   @override
   Future<UserProfile> updateProfile(ProfileUpdate update) async =>

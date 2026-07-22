@@ -164,10 +164,24 @@ class _FakePublicProfileRepository implements PublicProfileRepository {
 
 class _FakeProfileRepository implements ProfileRepository {
   @override
+  Future<UserProfile> deletePhoto(
+    int photoId, {
+    bool wasAvatar = false,
+  }) async => _currentProfile;
+
+  @override
+  Future<ProfileEditCatalog> getEditCatalog() async =>
+      const ProfileEditCatalog();
+
+  @override
   Future<UserProfile> getCurrentProfile() async => _currentProfile;
 
   @override
   Future<UserProfile> setAvatar(int photoId) async => _currentProfile;
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) async =>
+      _currentProfile;
 
   @override
   Future<UserProfile> updateProfile(ProfileUpdate update) async =>
