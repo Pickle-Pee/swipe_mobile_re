@@ -39,80 +39,83 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: AppGradientScaffold(
-      child: FutureBuilder<ChatDetails>(
-        future: _details,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || snapshot.data == null) {
-            return const Center(child: Text('Could not open this chat'));
-          }
-          final details = snapshot.data!;
-          return Column(
-            children: [
-              Padding(
-                padding: AppTokens.screenPadding,
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.go(Routes.chats),
-                      icon: const Icon(Icons.chevron_left_rounded),
-                    ),
-                    CircleAvatar(
-                      backgroundImage: details.user.avatarUrl == null
-                          ? null
-                          : NetworkImage(_mediaUrl(details.user.avatarUrl!)),
-                      child: details.user.avatarUrl == null
-                          ? const Icon(Icons.person_outline)
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          details.user.firstName,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        if (details.user.status != null)
-                          Text(
-                            details.user.status!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTokens.blueSoft,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(child: _messages()),
-              _composer(),
-            ],
-          );
-        },
-      ),
-    ),
-  );
-
-  Widget _messages() {
-    final state = ref.watch(chatMessagesControllerProvider(_chatId));
+  Widget build(BuildContext context) {
+    final messagesState = ref.watch(chatMessagesControllerProvider(_chatId));
+    final currentUserId = ref.watch(authControllerProvider).user?.id;
     ref.listen(chatMessagesControllerProvider(_chatId), (previous, next) {
       if ((previous?.messages.length ?? 0) != next.messages.length) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
       }
     });
+
+    return Scaffold(
+      body: AppGradientScaffold(
+        child: FutureBuilder<ChatDetails>(
+          future: _details,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || snapshot.data == null) {
+              return const Center(child: Text('Could not open this chat'));
+            }
+            final details = snapshot.data!;
+            return Column(
+              children: [
+                Padding(
+                  padding: AppTokens.screenPadding,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.go(Routes.chats),
+                        icon: const Icon(Icons.chevron_left_rounded),
+                      ),
+                      CircleAvatar(
+                        backgroundImage: details.user.avatarUrl == null
+                            ? null
+                            : NetworkImage(_mediaUrl(details.user.avatarUrl!)),
+                        child: details.user.avatarUrl == null
+                            ? const Icon(Icons.person_outline)
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            details.user.firstName,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          if (details.user.status != null)
+                            Text(
+                              details.user.status!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTokens.blueSoft,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: _messages(messagesState, currentUserId)),
+                _composer(messagesState),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _messages(ChatMessagesState state, int? currentUserId) {
     if (state.isLoading && state.messages.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.messages.isEmpty) {
       return const Center(child: Text('Start the conversation'));
     }
-    final currentUserId = ref.watch(authControllerProvider).user?.id;
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -149,8 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _composer() {
-    final state = ref.watch(chatMessagesControllerProvider(_chatId));
+  Widget _composer(ChatMessagesState state) {
     return SafeArea(
       top: false,
       child: Padding(

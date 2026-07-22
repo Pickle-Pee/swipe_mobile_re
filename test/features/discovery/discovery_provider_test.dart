@@ -32,6 +32,7 @@ void main() {
     final state = container.read(discoveryControllerProvider);
     expect(state.status, DiscoveryStatus.error);
     expect(state.current?.id, profile.id);
+    expect(state.failedReaction, DiscoveryReaction.like);
   });
 
   test(
@@ -57,8 +58,27 @@ void main() {
         container.read(discoveryControllerProvider).status,
         DiscoveryStatus.empty,
       );
+      expect(
+        container.read(discoveryControllerProvider).emptyReason,
+        DiscoveryEmptyReason.endOfFeed,
+      );
     },
   );
+
+  test('empty load is distinct from a consumed feed', () async {
+    final repository = FakeDiscoveryRepository(const []);
+    final container = ProviderContainer(
+      overrides: [discoveryRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(discoveryControllerProvider.notifier).load();
+
+    expect(
+      container.read(discoveryControllerProvider).emptyReason,
+      DiscoveryEmptyReason.noProfiles,
+    );
+  });
 
   test('mutual like exposes the matched profile once', () async {
     final repository = FakeDiscoveryRepository([profile]);
