@@ -77,7 +77,9 @@ class OwnProfileView extends StatelessWidget {
 
   Widget _content(BuildContext context) {
     final profile = state.profile;
-    if (state.status == ProfileStatus.loading && profile == null) {
+    if ((state.status == ProfileStatus.initial ||
+            state.status == ProfileStatus.loading) &&
+        profile == null) {
       return const _OwnProfileLoading(key: Key('own-profile-loading'));
     }
     if (state.status == ProfileStatus.error && profile == null) {

@@ -69,8 +69,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (!_initialized || draft == null)
+              if (!_initialized)
                 const _EditProfileLoading()
+              else if (draft == null)
+                _EditProfileUnavailable(onRetry: () => unawaited(_begin()))
               else
                 FocusTraversalGroup(
                   policy: OrderedTraversalPolicy(),
@@ -384,11 +386,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  void _begin() {
-    final profile = ref.read(profileControllerProvider).profile;
+  Future<void> _begin() async {
+    if (mounted) setState(() => _initialized = false);
+    var profile = ref.read(profileControllerProvider).profile;
     if (profile == null) {
-      if (mounted) setState(() => _initialized = true);
-      return;
+      await ref.read(profileControllerProvider.notifier).load();
+      profile = ref.read(profileControllerProvider).profile;
+      if (profile == null) {
+        if (mounted) setState(() => _initialized = true);
+        return;
+      }
     }
     final future = ref
         .read(profileEditControllerProvider.notifier)
@@ -718,6 +725,35 @@ class _EditProfileLoading extends StatelessWidget {
         SizedBox(height: AppTokens.space16),
         SkeletonLoader(height: 260),
       ],
+    );
+  }
+}
+
+class _EditProfileUnavailable extends StatelessWidget {
+  const _EditProfileUnavailable({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space20,
+            96,
+            AppTokens.space20,
+            AppTokens.space20,
+          ),
+          child: ErrorState(
+            key: const Key('edit-profile-unavailable'),
+            title: 'Profile unavailable',
+            message: 'Load your saved profile before editing it.',
+            actionLabel: 'Try again',
+            onAction: onRetry,
+          ),
+        ),
+      ),
     );
   }
 }

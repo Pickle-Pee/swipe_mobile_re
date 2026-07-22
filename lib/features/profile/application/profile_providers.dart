@@ -98,6 +98,7 @@ final profileControllerProvider =
 class ProfileController extends Notifier<ProfileState> {
   ProfileRepository get _repository => ref.read(profileRepositoryProvider);
   ProfilePhotoFile? _failedPhotoFile;
+  Future<void>? _loadFuture;
 
   @override
   ProfileState build() {
@@ -105,12 +106,23 @@ class ProfileController extends Notifier<ProfileState> {
       authControllerProvider.select((auth) => auth.user?.id),
     );
     _failedPhotoFile = null;
+    _loadFuture = null;
     if (userId != null) Future.microtask(load);
     return const ProfileState();
   }
 
-  Future<void> load() async {
-    if (state.status == ProfileStatus.loading && state.profile == null) return;
+  Future<void> load() {
+    final running = _loadFuture;
+    if (running != null) return running;
+    late final Future<void> tracked;
+    tracked = _performLoad().whenComplete(() {
+      if (identical(_loadFuture, tracked)) _loadFuture = null;
+    });
+    _loadFuture = tracked;
+    return tracked;
+  }
+
+  Future<void> _performLoad() async {
     final userId = ref.read(authControllerProvider).user?.id;
     state = state.copyWith(
       status: ProfileStatus.loading,
