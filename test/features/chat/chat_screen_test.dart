@@ -98,6 +98,45 @@ void main() {
     expect(retries, 1);
   });
 
+  testWidgets('shows compact older-page loading, retry, and beginning states', (
+    tester,
+  ) async {
+    final message = _message(id: 1, senderId: 2, text: 'Existing message');
+    await _pumpConversation(
+      tester,
+      messagesState: ChatMessagesState(
+        messages: [message],
+        isLoading: false,
+        isLoadingOlder: true,
+        hasMore: true,
+        nextCursor: 'older',
+      ),
+    );
+    expect(find.byKey(const Key('chat-history-older-loading')), findsOneWidget);
+    expect(find.text('Existing message'), findsOneWidget);
+
+    var retries = 0;
+    await _pumpConversation(
+      tester,
+      messagesState: ChatMessagesState(
+        messages: [message],
+        isLoading: false,
+        loadOlderError: const ChatOlderHistoryFailure(),
+        hasMore: true,
+        nextCursor: 'older',
+      ),
+      onRetryOlder: () => retries++,
+    );
+    await tester.tap(find.byKey(const Key('chat-history-older-retry')));
+    expect(retries, 1);
+
+    await _pumpConversation(
+      tester,
+      messagesState: ChatMessagesState(messages: [message], isLoading: false),
+    );
+    expect(find.text('Beginning of conversation'), findsOneWidget);
+  });
+
   testWidgets('failed message stays visible and exposes one retry action', (
     tester,
   ) async {
@@ -217,6 +256,91 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('chat-composer')), findsOneWidget);
   });
+
+  testWidgets('a thousand-message state remains lazily built', (tester) async {
+    final messages = List.generate(
+      1000,
+      (index) => _message(
+        id: index + 1,
+        senderId: index.isEven ? 1 : 2,
+        text: 'Message ${index + 1}',
+        createdAt: DateTime.utc(2026, 7, 1).add(Duration(minutes: index)),
+      ),
+    );
+
+    await _pumpConversation(tester, messages: messages);
+
+    expect(find.byType(MessageBubble).evaluate().length, lessThan(50));
+    expect(find.text('Message 1000'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('prepending older messages preserves the visible scroll range', (
+    tester,
+  ) async {
+    final initial = List.generate(
+      80,
+      (index) => _message(
+        id: index + 31,
+        senderId: index.isEven ? 1 : 2,
+        text: 'Current ${index + 31}',
+        createdAt: DateTime.utc(2026, 7, 22).add(Duration(minutes: index + 31)),
+      ),
+    );
+    late _MutableChatMessagesController controller;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(_ChatRepository()),
+          chatMessagesControllerProvider.overrideWith2((chatId) {
+            controller = _MutableChatMessagesController(chatId, initial);
+            return controller;
+          }),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.midnight(),
+          home: const ChatScreen(chatId: '7'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final list = find.byType(ListView);
+    await tester.drag(list, const Offset(0, -1200));
+    await tester.pumpAndSettle();
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.pixels, greaterThan(160));
+    final distanceFromBottom = position.maxScrollExtent - position.pixels;
+
+    controller.startLoadingOlder();
+    await tester.pump();
+    controller.finishLoadingOlder(
+      List.generate(
+        30,
+        (index) => _message(
+          id: index + 1,
+          senderId: index.isEven ? 1 : 2,
+          text: 'Older ${index + 1}',
+          createdAt: DateTime.utc(
+            2026,
+            7,
+            22,
+          ).add(Duration(minutes: index + 1)),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      position.maxScrollExtent - position.pixels,
+      closeTo(distanceFromBottom, 1),
+    );
+    expect(find.bySemanticsLabel('Scroll to 30 new messages'), findsNothing);
+  });
 }
 
 Future<void> _pumpConversation(
@@ -229,6 +353,7 @@ Future<void> _pumpConversation(
   VoidCallback? onOpenProfile,
   VoidCallback? onRetryDetails,
   VoidCallback? onRetryHistory,
+  VoidCallback? onRetryOlder,
   ValueChanged<String>? onRetryMessage,
   VoidCallback? onSend,
   Size size = const Size(390, 844),
@@ -278,6 +403,7 @@ Future<void> _pumpConversation(
           onOpenProfile: onOpenProfile ?? () {},
           onRetryDetails: onRetryDetails ?? () {},
           onRetryHistory: onRetryHistory ?? () {},
+          onRetryOlder: onRetryOlder ?? () {},
           onRetryMessage: onRetryMessage ?? (_) {},
           onSend: onSend ?? () {},
           onScrollToBottom: () {},
@@ -332,9 +458,47 @@ class _ChatMessagesController extends ChatMessagesController {
   }
 }
 
+class _MutableChatMessagesController extends ChatMessagesController {
+  _MutableChatMessagesController(super.chatId, this.initialMessages);
+
+  final List<ChatMessage> initialMessages;
+
+  @override
+  ChatMessagesState build() => ChatMessagesState(
+    messages: initialMessages,
+    initialLoading: false,
+    hasMore: true,
+    nextCursor: 'older',
+  );
+
+  @override
+  Future<void> loadOlder() async {}
+
+  void startLoadingOlder() {
+    state = state.copyWith(isLoadingOlder: true, loadOlderError: null);
+  }
+
+  void finishLoadingOlder(List<ChatMessage> older) {
+    state = state.copyWith(
+      messages: [...older, ...state.messages],
+      isLoadingOlder: false,
+      hasMore: true,
+      nextCursor: 'older-again',
+    );
+  }
+}
+
 class _ChatRepository implements ChatRepository {
   @override
   Future<ChatDetails> getChatDetails(int chatId) async => _details;
+
+  @override
+  Future<ChatMessagePage> getMessages(
+    int chatId, {
+    String? before,
+    int limit = 30,
+  }) async =>
+      const ChatMessagePage(items: [], nextCursor: null, hasMore: false);
 
   @override
   Future<int> createChat(int userId) => throw UnimplementedError();

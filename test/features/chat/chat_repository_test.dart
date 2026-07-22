@@ -51,6 +51,86 @@ void main() {
 
     expect(await createRepository(adapter).createChat(9), 7);
   });
+
+  test('loads one bounded message page with cursor query parameters', () async {
+    final adapter = MockHttpAdapter((options) async {
+      expect(options.method, 'GET');
+      expect(options.path, '/communication/7/messages');
+      expect(options.queryParameters, {'limit': 30, 'before': 'cursor-value'});
+      return jsonResponse(200, {
+        'items': [
+          {
+            'message_id': 10,
+            'chat_id': 7,
+            'sender_id': 2,
+            'message': 'Older image',
+            'status': 1,
+            'message_type': 'image',
+            'created_at': '2026-07-22T08:00:00Z',
+            'media_urls': ['https://cdn.example.test/message.jpg'],
+            'voice_data': null,
+          },
+          {
+            'message_id': 11,
+            'chat_id': 7,
+            'sender_id': 1,
+            'message': '',
+            'status': 2,
+            'message_type': 'voice',
+            'created_at': '2026-07-22T08:01:00Z',
+            'media_urls': <String>[],
+            'voice_data': [1, 2, 255],
+          },
+        ],
+        'next_cursor': 'next-page',
+        'has_more': true,
+      });
+    });
+
+    final page = await createRepository(
+      adapter,
+    ).getMessages(7, before: 'cursor-value');
+
+    expect(page.items.map((message) => message.id), [10, 11]);
+    expect(page.items.first.type, ChatMessageType.image);
+    expect(page.items.first.mediaUrls, [
+      'https://cdn.example.test/message.jpg',
+    ]);
+    expect(page.items.last.type, ChatMessageType.voice);
+    expect(page.items.last.voiceData, [1, 2, 255]);
+    expect(page.items.last.status, ChatMessageStatus.read);
+    expect(page.nextCursor, 'next-page');
+    expect(page.hasMore, isTrue);
+  });
+
+  test('omits before on the latest page request', () async {
+    final adapter = MockHttpAdapter((options) async {
+      expect(options.path, '/communication/4/messages');
+      expect(options.queryParameters, {'limit': 12});
+      return jsonResponse(200, {
+        'items': <Object>[],
+        'next_cursor': null,
+        'has_more': false,
+      });
+    });
+
+    final page = await createRepository(adapter).getMessages(4, limit: 12);
+
+    expect(page.items, isEmpty);
+    expect(page.nextCursor, isNull);
+    expect(page.hasMore, isFalse);
+  });
+
+  test('rejects a response that promises another page without a cursor', () {
+    expect(
+      () => ChatMessagePage.fromJson({
+        'items': <Object>[],
+        'next_cursor': null,
+        'has_more': true,
+      }, chatId: 7),
+      throwsFormatException,
+    );
+  });
 }
 
 DioChatRepository createRepository(HttpClientAdapter adapter) {

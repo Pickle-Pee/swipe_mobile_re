@@ -295,6 +295,7 @@ Future<void> _pumpConversation(
             onOpenProfile: () {},
             onRetryDetails: () {},
             onRetryHistory: () {},
+            onRetryOlder: () {},
             onRetryMessage: (_) {},
             onSend: () {},
             onScrollToBottom: () {},

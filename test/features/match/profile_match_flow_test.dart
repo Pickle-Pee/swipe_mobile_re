@@ -201,6 +201,14 @@ class _FakeChatRepository implements ChatRepository {
   Future<ChatDetails> getChatDetails(int chatId) => throw UnimplementedError();
 
   @override
+  Future<ChatMessagePage> getMessages(
+    int chatId, {
+    String? before,
+    int limit = 30,
+  }) async =>
+      const ChatMessagePage(items: [], nextCursor: null, hasMore: false);
+
+  @override
   Future<int?> getChatIdByUserId(int userId) async {
     lookupCalls++;
     return existingChatId;
