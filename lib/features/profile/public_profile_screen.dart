@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/router/routes.dart';
 import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
 import '../../shared/theme/tokens.dart';
@@ -10,6 +12,7 @@ import '../../shared/ui/liquid_ui.dart';
 import '../../shared/ui/midnight_components.dart';
 import '../../shared/ui/profile_components.dart';
 import '../discovery/domain/discovery_models.dart';
+import '../discovery/application/discovery_providers.dart';
 import 'application/public_profile_providers.dart';
 import 'domain/profile_models.dart';
 
@@ -47,10 +50,27 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(publicProfileControllerProvider(widget.userId));
+    final discovery = ref.watch(discoveryControllerProvider);
+    final isCurrentProfile = discovery.current?.id == widget.userId;
     return PublicProfileView(
       state: state,
       onBack: () => Navigator.maybePop(context),
       onRetry: _load,
+      showActions: isCurrentProfile,
+      passLoading: discovery.processingReaction == DiscoveryReaction.pass,
+      likeLoading: discovery.processingReaction == DiscoveryReaction.like,
+      reactionError: isCurrentProfile && discovery.failedReaction != null
+          ? discovery.error
+          : null,
+      onPass: isCurrentProfile && !discovery.isProcessing
+          ? () => unawaited(_react(DiscoveryReaction.pass))
+          : null,
+      onLike: isCurrentProfile && !discovery.isProcessing
+          ? () => unawaited(_react(DiscoveryReaction.like))
+          : null,
+      onRetryReaction: discovery.failedReaction != null
+          ? () => unawaited(_retryReaction())
+          : null,
     );
   }
 
@@ -60,6 +80,23 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           .read(publicProfileControllerProvider(widget.userId).notifier)
           .load(seed: _seedFromDiscovery(widget.initialProfile)),
     );
+  }
+
+  Future<void> _react(DiscoveryReaction reaction) async {
+    final controller = ref.read(discoveryControllerProvider.notifier);
+    final result = reaction == DiscoveryReaction.like
+        ? await controller.like()
+        : await controller.pass();
+    if (!mounted || result == null) return;
+    if (!result.isMatch) context.go(Routes.discover);
+  }
+
+  Future<void> _retryReaction() async {
+    final result = await ref
+        .read(discoveryControllerProvider.notifier)
+        .retryReaction();
+    if (!mounted || result == null) return;
+    if (!result.isMatch) context.go(Routes.discover);
   }
 }
 
@@ -72,7 +109,13 @@ class PublicProfileView extends StatelessWidget {
     required this.onRetry,
     this.imageProviderBuilder,
     this.enableHero = true,
-    this.bottomClearance = AppTokens.space40,
+    this.showActions = false,
+    this.onPass,
+    this.onLike,
+    this.onRetryReaction,
+    this.passLoading = false,
+    this.likeLoading = false,
+    this.reactionError,
   });
 
   final PublicProfileState state;
@@ -80,7 +123,13 @@ class PublicProfileView extends StatelessWidget {
   final VoidCallback onRetry;
   final PublicProfileImageProviderBuilder? imageProviderBuilder;
   final bool enableHero;
-  final double bottomClearance;
+  final bool showActions;
+  final VoidCallback? onPass;
+  final VoidCallback? onLike;
+  final VoidCallback? onRetryReaction;
+  final bool passLoading;
+  final bool likeLoading;
+  final Object? reactionError;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +163,35 @@ class PublicProfileView extends StatelessWidget {
                 ),
               ),
             ),
+            if (showActions)
+              Positioned(
+                left: AppTokens.space12,
+                right: AppTokens.space12,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: AppTokens.space8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (reactionError != null) ...[
+                        _ProfileReactionError(
+                          message: _profileErrorMessage(reactionError),
+                          onRetry: onRetryReaction,
+                        ),
+                        const SizedBox(height: AppTokens.space8),
+                      ],
+                      ProfileActionBar(
+                        key: const Key('public-profile-action-bar'),
+                        onPass: onPass,
+                        onLike: onLike,
+                        passLoading: passLoading,
+                        likeLoading: likeLoading,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -170,7 +248,7 @@ class PublicProfileView extends StatelessWidget {
       onRetry: onRetry,
       imageProviderBuilder: imageProviderBuilder ?? _networkProfileImage,
       enableHero: enableHero,
-      bottomClearance: bottomClearance,
+      bottomClearance: showActions ? 164 : AppTokens.space40,
     );
   }
 }
@@ -315,6 +393,53 @@ class _ProfileRefreshError extends StatelessWidget {
             const SizedBox(width: AppTokens.space12),
             Expanded(child: Text(message)),
             TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileReactionError extends StatelessWidget {
+  const _ProfileReactionError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        key: const Key('public-profile-reaction-error'),
+        padding: const EdgeInsets.fromLTRB(
+          AppTokens.space16,
+          AppTokens.space8,
+          AppTokens.space8,
+          AppTokens.space8,
+        ),
+        decoration: BoxDecoration(
+          color: AppTokens.surfaceSolid,
+          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+          border: Border.all(color: AppTokens.error.withValues(alpha: 0.54)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppTokens.error,
+              size: AppTokens.iconStandard,
+            ),
+            const SizedBox(width: AppTokens.space8),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (onRetry != null)
+              TextButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

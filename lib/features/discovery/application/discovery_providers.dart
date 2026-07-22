@@ -71,17 +71,17 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     }
   }
 
-  Future<void> like() => _react(DiscoveryReaction.like);
-  Future<void> pass() => _react(DiscoveryReaction.pass);
+  Future<DiscoveryReactionResult?> like() => _react(DiscoveryReaction.like);
+  Future<DiscoveryReactionResult?> pass() => _react(DiscoveryReaction.pass);
 
-  Future<void> retryReaction() async {
+  Future<DiscoveryReactionResult?> retryReaction() async {
     final reaction = state.failedReaction;
-    if (reaction != null) await _react(reaction);
+    return reaction == null ? null : _react(reaction);
   }
 
-  Future<void> _react(DiscoveryReaction reaction) async {
+  Future<DiscoveryReactionResult?> _react(DiscoveryReaction reaction) async {
     final current = state.current;
-    if (current == null || state.isProcessing) return;
+    if (current == null || state.isProcessing) return null;
     state = DiscoveryState(
       status: DiscoveryStatus.data,
       profiles: state.profiles,
@@ -101,6 +101,7 @@ class DiscoveryController extends Notifier<DiscoveryState> {
         lastReaction: result,
         matchedProfile: result.isMatch ? current : null,
       );
+      return result;
     } on Object catch (error) {
       state = DiscoveryState(
         status: DiscoveryStatus.error,
@@ -110,6 +111,7 @@ class DiscoveryController extends Notifier<DiscoveryState> {
         error: error,
         lastReaction: state.lastReaction,
       );
+      return null;
     }
   }
 

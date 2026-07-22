@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/profile/domain/profile_models.dart';
 import '../theme/tokens.dart';
 import 'discovery_components.dart';
+import 'liquid_ui.dart';
 import 'midnight_components.dart';
 
 String profileMediaHeroTag(int profileId) => 'public-profile-media-$profileId';
@@ -306,6 +307,62 @@ class ProfileFacts extends StatelessWidget {
             ),
         ],
       ],
+    );
+  }
+}
+
+class ProfileActionBar extends StatelessWidget {
+  const ProfileActionBar({
+    super.key,
+    required this.onPass,
+    required this.onLike,
+    this.passLoading = false,
+    this.likeLoading = false,
+  });
+
+  final VoidCallback? onPass;
+  final VoidCallback? onLike;
+  final bool passLoading;
+  final bool likeLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: GlassSurface(
+        level: GlassLevel.overlay,
+        radius: AppTokens.radiusXLarge,
+        padding: const EdgeInsets.all(AppTokens.space8),
+        child: Row(
+          children: [
+            Expanded(
+              child: FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: SecondaryActionButton(
+                  key: const Key('public-profile-pass'),
+                  label: 'Pass',
+                  icon: Icons.close_rounded,
+                  loading: passLoading,
+                  onPressed: onPass,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTokens.space8),
+            Expanded(
+              child: FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: PrimaryActionButton(
+                  key: const Key('public-profile-like'),
+                  label: 'Like',
+                  icon: Icons.favorite_rounded,
+                  loading: likeLoading,
+                  onPressed: onLike,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
