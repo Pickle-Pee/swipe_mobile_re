@@ -95,6 +95,27 @@ void main() {
       expect(transport.handlers, isEmpty);
     },
   );
+
+  test(
+    'disconnect cancels a transport handshake that is still pending',
+    () async {
+      final backend = MemoryStorage();
+      final storage = SessionStorage(backend: backend);
+      final transport = FakeSocketTransport();
+      await storage.saveTokens('token', 'refresh');
+      final manager = ChatSocketManager(transport: transport, storage: storage);
+      addTearDown(manager.dispose);
+      addTearDown(storage.dispose);
+
+      await manager.connect();
+      expect(transport.connected, isFalse);
+
+      manager.disconnect();
+
+      expect(transport.disconnectCalls, 1);
+      expect(manager.connectionState, ChatConnectionState.offline);
+    },
+  );
 }
 
 class MemoryStorage implements SecureStorageBackend {

@@ -134,7 +134,9 @@ class ChatSocketManager {
     _connectRequested = false;
     _isAuthenticated = false;
     _pending.clear();
-    if (_transport.connected) _transport.disconnect();
+    // A transport may still be in its handshake while `connected` is false.
+    // Disconnect unconditionally so logout/dispose also cancels that attempt.
+    _transport.disconnect();
     _setConnectionState(ChatConnectionState.offline);
   }
 
