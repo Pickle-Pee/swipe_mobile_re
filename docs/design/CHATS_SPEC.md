@@ -59,10 +59,10 @@ does not own a media picker, recorder, or audio player. DES-03 therefore:
 - fully renders, sends, acknowledges, retries, and statuses text messages;
 - does not expose attachment or voice controls that are not wired to the
   active flow;
-- treats non-text history defensively without inventing playback, waveform,
-  upload, or full-screen media flows;
-- does not add image/voice goldens until those types have an end-to-end active
-  controller and deterministic media lifecycle.
+- renders incoming image history in a bounded bubble with a deterministic
+  fallback, without implying that image sending is active;
+- treats voice and unknown history defensively without inventing playback,
+  waveform, upload, or full-screen media flows.
 
 ## Chat list structure
 
@@ -255,11 +255,12 @@ Chats empty
 Chats error
 Chat normal
 Chat long messages
+Chat image receive
 Chat offline
 Chat send error
 Chat expanded composer
 ```
 
-Image and voice goldens are intentionally excluded until their active
-end-to-end flows exist. Golden MediaQuery disables animations and no test
-contacts production services.
+The image golden covers the supported receive-only presentation. A voice
+golden is intentionally excluded until an active player exists. Golden
+MediaQuery disables animations and no test contacts production services.
