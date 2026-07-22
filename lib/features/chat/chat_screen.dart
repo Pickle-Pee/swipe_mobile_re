@@ -6,12 +6,17 @@ import '../../app/router/routes.dart';
 import '../../core/config/config.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/liquid_ui.dart';
+import '../../shared/ui/midnight_components.dart';
 import '../auth/application/auth_providers.dart';
 import 'application/chat_providers.dart';
+import 'application/chat_socket.dart';
 import 'domain/chat_models.dart';
+import 'presentation/chat_composer.dart';
+import 'presentation/chat_components.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.chatId});
+
   final String chatId;
 
   @override
@@ -19,194 +24,398 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
-  late final Future<ChatDetails> _details;
-  late final int _chatId;
   final _messageController = TextEditingController();
+  final _focusNode = FocusNode();
   final _scrollController = ScrollController();
+  ProviderSubscription<ChatMessagesState>? _messagesSubscription;
+  ActiveChatRegistry? _activeChatRegistry;
+  Future<ChatDetails>? _details;
+  int? _chatId;
+  int _unreadBelow = 0;
+  bool _showScrollToBottom = false;
 
   @override
   void initState() {
     super.initState();
-    _chatId = int.parse(widget.chatId);
-    _details = ref.read(chatRepositoryProvider).getChatDetails(_chatId);
+    _chatId = int.tryParse(widget.chatId);
+    _scrollController.addListener(_handleScroll);
+    final chatId = _chatId;
+    if (chatId == null) return;
+    _activeChatRegistry = ref.read(activeChatRegistryProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _activateChat();
+      ref.read(chatListControllerProvider.notifier).markChatOpen(chatId);
+    });
+    _messagesSubscription = ref.listenManual(
+      chatMessagesControllerProvider(chatId),
+      _handleMessagesChanged,
+    );
+    _loadDetails();
   }
 
   @override
   void dispose() {
+    final chatId = _chatId;
+    _messagesSubscription?.close();
+    if (chatId != null) {
+      _activeChatRegistry?.close(chatId);
+    }
     _messageController.dispose();
-    _scrollController.dispose();
+    _focusNode.dispose();
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final messagesState = ref.watch(chatMessagesControllerProvider(_chatId));
+    final chatId = _chatId;
+    final messagesState = chatId == null
+        ? const ChatMessagesState(isLoading: false, error: ChatHistoryFailure())
+        : ref.watch(chatMessagesControllerProvider(chatId));
     final currentUserId = ref.watch(authControllerProvider).user?.id;
-    ref.listen(chatMessagesControllerProvider(_chatId), (previous, next) {
-      if ((previous?.messages.length ?? 0) != next.messages.length) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-      }
-    });
+    final connectionState =
+        ref.watch(chatConnectionStateProvider).value ??
+        ref.read(chatSocketManagerProvider).connectionState;
 
-    return Scaffold(
-      body: AppGradientScaffold(
-        child: FutureBuilder<ChatDetails>(
-          future: _details,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError || snapshot.data == null) {
-              return const Center(child: Text('Could not open this chat'));
-            }
-            final details = snapshot.data!;
-            return Column(
-              children: [
-                Padding(
-                  padding: AppTokens.screenPadding,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.go(Routes.chats),
-                        icon: const Icon(Icons.chevron_left_rounded),
-                      ),
-                      CircleAvatar(
-                        backgroundImage: details.user.avatarUrl == null
-                            ? null
-                            : NetworkImage(_mediaUrl(details.user.avatarUrl!)),
-                        child: details.user.avatarUrl == null
-                            ? const Icon(Icons.person_outline)
-                            : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            details.user.firstName,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (details.user.status != null)
-                            Text(
-                              details.user.status!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppTokens.blueSoft,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(child: _messages(messagesState, currentUserId)),
-                _composer(messagesState),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _messages(ChatMessagesState state, int? currentUserId) {
-    if (state.isLoading && state.messages.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (state.messages.isEmpty) {
-      return const Center(child: Text('Start the conversation'));
-    }
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      itemCount: state.messages.length,
-      itemBuilder: (context, index) {
-        final message = state.messages[index];
-        final mine = message.senderId == currentUserId;
-        return Align(
-          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 290),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: mine ? AppTokens.blueSoft : AppTokens.surfaceStrong,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(message.text),
-                if (mine) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    _statusLabel(message.status),
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _deactivateChat();
       },
+      child: FutureBuilder<ChatDetails>(
+        future: _details,
+        builder: (context, snapshot) {
+          return ChatConversationView(
+            details: snapshot.data,
+            detailsLoading:
+                chatId != null &&
+                snapshot.connectionState != ConnectionState.done,
+            detailsError: chatId == null
+                ? const FormatException('Invalid chat id')
+                : snapshot.error,
+            messagesState: messagesState,
+            currentUserId: currentUserId,
+            connectionState: connectionState,
+            messageController: _messageController,
+            focusNode: _focusNode,
+            scrollController: _scrollController,
+            showScrollToBottom: _showScrollToBottom,
+            unreadBelow: _unreadBelow,
+            onBack: _handleBack,
+            onOpenProfile: snapshot.data == null
+                ? null
+                : () => _openProfile(snapshot.data!.user.id),
+            onRetryDetails: _loadDetails,
+            onRetryHistory: chatId == null
+                ? () {}
+                : () => ref
+                      .read(chatMessagesControllerProvider(chatId).notifier)
+                      .retryHistory(),
+            onRetryMessage: chatId == null
+                ? (_) {}
+                : (localId) => ref
+                      .read(chatMessagesControllerProvider(chatId).notifier)
+                      .retry(localId),
+            onSend: _send,
+            onScrollToBottom: () => _scrollToBottom(),
+            imageProviderBuilder: _chatImageProvider,
+          );
+        },
+      ),
     );
   }
 
-  Widget _composer(ChatMessagesState state) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _messageController,
-                textInputAction: TextInputAction.send,
-                onSubmitted: state.isSending ? null : (_) => _send(),
-                decoration: const InputDecoration(hintText: 'Message'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: state.isSending ? null : _send,
-              icon: const Icon(Icons.send_rounded),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _loadDetails() {
+    final chatId = _chatId;
+    if (chatId == null) return;
+    setState(() {
+      _details = ref.read(chatRepositoryProvider).getChatDetails(chatId);
+    });
   }
 
   Future<void> _send() async {
-    final text = _messageController.text;
-    if (text.trim().isEmpty) return;
+    final chatId = _chatId;
+    if (chatId == null) return;
+    final sent = await ref
+        .read(chatMessagesControllerProvider(chatId).notifier)
+        .send(_messageController.text);
+    if (!sent || !mounted) return;
     _messageController.clear();
-    await ref.read(chatMessagesControllerProvider(_chatId).notifier).send(text);
+    _focusNode.requestFocus();
     _scrollToBottom();
   }
 
-  void _scrollToBottom() {
+  void _handleMessagesChanged(
+    ChatMessagesState? previous,
+    ChatMessagesState next,
+  ) {
+    final previousLength = previous?.messages.length ?? 0;
+    final added = next.messages.length - previousLength;
+    if (previous?.isLoading == true &&
+        !next.isLoading &&
+        next.messages.isNotEmpty) {
+      _scrollToBottom(animate: false);
+      return;
+    }
+    if (added <= 0 || next.messages.isEmpty) return;
+    final currentUserId = ref.read(authControllerProvider).user?.id;
+    final latestIsMine = next.messages.last.senderId == currentUserId;
+    if (latestIsMine || _isNearBottom) {
+      _scrollToBottom();
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _unreadBelow += added;
+      _showScrollToBottom = true;
+    });
+  }
+
+  void _handleScroll() {
     if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
+    final shouldShow = !_isNearBottom;
+    if (shouldShow == _showScrollToBottom &&
+        (shouldShow || _unreadBelow == 0)) {
+      return;
+    }
+    setState(() {
+      _showScrollToBottom = shouldShow;
+      if (!shouldShow) _unreadBelow = 0;
+    });
+  }
+
+  bool get _isNearBottom {
+    if (!_scrollController.hasClients) return true;
+    final position = _scrollController.position;
+    return position.maxScrollExtent - position.pixels < 96;
+  }
+
+  void _scrollToBottom({bool animate = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final target = _scrollController.position.maxScrollExtent;
+      if (!animate || MediaQuery.disableAnimationsOf(context)) {
+        _scrollController.jumpTo(target);
+      } else {
+        _scrollController.animateTo(
+          target,
+          duration: AppTokens.motionContent,
+          curve: Curves.easeOutCubic,
+        );
+      }
+      if (_showScrollToBottom || _unreadBelow > 0) {
+        setState(() {
+          _showScrollToBottom = false;
+          _unreadBelow = 0;
+        });
+      }
+    });
+  }
+
+  void _handleBack() {
+    _focusNode.unfocus();
+    _deactivateChat();
+    if (Navigator.of(context).canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.chats);
+    }
+  }
+
+  Future<void> _openProfile(int userId) async {
+    _deactivateChat();
+    await context.push(Routes.publicProfileFor(userId));
+    if (mounted) _activateChat();
+  }
+
+  void _activateChat() {
+    final chatId = _chatId;
+    if (chatId != null) {
+      _activeChatRegistry?.open(chatId);
+    }
+  }
+
+  void _deactivateChat() {
+    final chatId = _chatId;
+    if (chatId != null) {
+      _activeChatRegistry?.close(chatId);
+    }
+  }
+}
+
+class ChatConversationView extends StatelessWidget {
+  const ChatConversationView({
+    super.key,
+    required this.details,
+    required this.detailsLoading,
+    required this.detailsError,
+    required this.messagesState,
+    required this.currentUserId,
+    required this.connectionState,
+    required this.messageController,
+    required this.focusNode,
+    required this.scrollController,
+    required this.showScrollToBottom,
+    required this.unreadBelow,
+    required this.onBack,
+    required this.onOpenProfile,
+    required this.onRetryDetails,
+    required this.onRetryHistory,
+    required this.onRetryMessage,
+    required this.onSend,
+    required this.onScrollToBottom,
+    this.imageProviderBuilder,
+  });
+
+  final ChatDetails? details;
+  final bool detailsLoading;
+  final Object? detailsError;
+  final ChatMessagesState messagesState;
+  final int? currentUserId;
+  final ChatConnectionState connectionState;
+  final TextEditingController messageController;
+  final FocusNode focusNode;
+  final ScrollController scrollController;
+  final bool showScrollToBottom;
+  final int unreadBelow;
+  final VoidCallback onBack;
+  final VoidCallback? onOpenProfile;
+  final VoidCallback onRetryDetails;
+  final VoidCallback onRetryHistory;
+  final ValueChanged<String> onRetryMessage;
+  final VoidCallback onSend;
+  final VoidCallback onScrollToBottom;
+  final ChatImageProviderBuilder? imageProviderBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTokens.backgroundBase,
+      resizeToAvoidBottomInset: true,
+      body: AppGradientScaffold(
+        safeArea: false,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTokens.space12,
+                  AppTokens.space8,
+                  AppTokens.space12,
+                  AppTokens.space8,
+                ),
+                child: details == null
+                    ? _ChatTopBarSkeleton(onBack: onBack)
+                    : ChatTopBar(
+                        key: const Key('chat-top-bar'),
+                        user: details!.user,
+                        connectionState: connectionState,
+                        onBack: onBack,
+                        onOpenProfile: onOpenProfile ?? () {},
+                        imageProviderBuilder: imageProviderBuilder,
+                      ),
+              ),
+              if (detailsError != null && !detailsLoading && details == null)
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppTokens.space20),
+                      child: ErrorState(
+                        key: const Key('chat-details-error'),
+                        title: 'Could not open this chat',
+                        message:
+                            'The conversation details are unavailable. Try again.',
+                        actionLabel: 'Try again',
+                        onAction: onRetryDetails,
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                ConnectionBanner(connectionState: connectionState),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: MessageList(
+                          state: messagesState,
+                          currentUserId: currentUserId,
+                          scrollController: scrollController,
+                          onRetryHistory: onRetryHistory,
+                          onRetryMessage: onRetryMessage,
+                          imageProviderBuilder: imageProviderBuilder,
+                        ),
+                      ),
+                      if (showScrollToBottom)
+                        Positioned(
+                          right: AppTokens.space16,
+                          bottom: AppTokens.space12,
+                          child: ScrollToBottomButton(
+                            onPressed: onScrollToBottom,
+                            unreadBelow: unreadBelow,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                ChatComposer(
+                  controller: messageController,
+                  focusNode: focusNode,
+                  connectionState: connectionState,
+                  isSending: messagesState.isSending,
+                  onSend: onSend,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-String _statusLabel(ChatMessageStatus status) => switch (status) {
-  ChatMessageStatus.sending => 'Sending…',
-  ChatMessageStatus.sent => 'Sent',
-  ChatMessageStatus.delivered => 'Delivered',
-  ChatMessageStatus.read => 'Read',
-  ChatMessageStatus.failed => 'Failed',
-};
+class _ChatTopBarSkeleton extends StatelessWidget {
+  const _ChatTopBarSkeleton({required this.onBack});
 
-String _mediaUrl(String value) {
-  final uri = Uri.parse(value);
-  return uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(value).toString();
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassSurface(
+      key: const Key('chat-top-bar-loading'),
+      level: GlassLevel.overlay,
+      radius: AppTokens.radiusLarge,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space8,
+        vertical: AppTokens.space4,
+      ),
+      child: Row(
+        children: [
+          GlassIconButton(
+            icon: Icons.arrow_back_rounded,
+            semanticLabel: 'Back to chats',
+            onPressed: onBack,
+          ),
+          const SizedBox(width: AppTokens.space8),
+          const SkeletonLoader(width: 42, height: 42, radius: 21),
+          const SizedBox(width: AppTokens.space12),
+          const Expanded(child: SkeletonLoader(height: 18)),
+          const SizedBox(width: AppTokens.space20),
+        ],
+      ),
+    );
+  }
+}
+
+ImageProvider<Object>? _chatImageProvider(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parsed = Uri.tryParse(value);
+  if (parsed == null) return null;
+  final url = parsed.hasScheme
+      ? parsed.toString()
+      : Uri.parse(AppConfig.baseAppUrl).resolveUri(parsed).toString();
+  return NetworkImage(url);
 }
