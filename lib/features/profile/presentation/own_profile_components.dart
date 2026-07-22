@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../shared/media/app_network_image.dart';
@@ -811,6 +812,15 @@ class _OwnProfileStateFrame extends StatelessWidget {
 
 String profileErrorMessage(Object? error) {
   if (error is InvalidProfilePhotoException) return error.message;
+  if (error is PlatformException) {
+    final details = '${error.code} ${error.message ?? ''}'.toLowerCase();
+    if (details.contains('denied') || details.contains('permission')) {
+      return details.contains('permanent')
+          ? 'Photo access is blocked. Allow photo access in system settings '
+                'and try again.'
+          : 'Photo access was denied. Allow access and try again.';
+    }
+  }
   if (error is PartialProfileSaveException) {
     return 'Some sections were saved, but the profile update did not finish. '
         'Your remaining draft is still here.';
