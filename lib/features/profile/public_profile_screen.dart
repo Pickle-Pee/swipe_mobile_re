@@ -13,6 +13,8 @@ import '../../shared/ui/midnight_components.dart';
 import '../../shared/ui/profile_components.dart';
 import '../discovery/domain/discovery_models.dart';
 import '../discovery/application/discovery_providers.dart';
+import '../likes/application/likes_providers.dart';
+import '../subscription/application/subscription_providers.dart';
 import 'application/public_profile_providers.dart';
 import 'domain/profile_models.dart';
 import 'domain/public_profile_seed.dart';
@@ -25,10 +27,12 @@ class PublicProfileScreen extends ConsumerStatefulWidget {
     super.key,
     required this.userId,
     this.initialProfile,
+    this.fromLikes = false,
   });
 
   final int userId;
   final DiscoveryProfile? initialProfile;
+  final bool fromLikes;
 
   @override
   ConsumerState<PublicProfileScreen> createState() =>
@@ -52,24 +56,34 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(publicProfileControllerProvider(widget.userId));
     final discovery = ref.watch(discoveryControllerProvider);
+    final access = ref.watch(subscriptionAccessControllerProvider);
     final isCurrentProfile = discovery.current?.id == widget.userId;
+    final isLikesProfile = widget.fromLikes && access.hasPremiumAccess;
+    final isReactionTarget =
+        discovery.processingProfileId == widget.userId ||
+        discovery.failedProfile?.id == widget.userId;
     return PublicProfileView(
       state: state,
       onBack: () => Navigator.maybePop(context),
       onRetry: _load,
-      showActions: isCurrentProfile,
-      passLoading: discovery.processingReaction == DiscoveryReaction.pass,
-      likeLoading: discovery.processingReaction == DiscoveryReaction.like,
-      reactionError: isCurrentProfile && discovery.failedReaction != null
+      showActions: isCurrentProfile || isLikesProfile,
+      showPassAction: !widget.fromLikes,
+      passLoading:
+          isReactionTarget &&
+          discovery.processingReaction == DiscoveryReaction.pass,
+      likeLoading:
+          isReactionTarget &&
+          discovery.processingReaction == DiscoveryReaction.like,
+      reactionError: isReactionTarget && discovery.failedReaction != null
           ? discovery.error
           : null,
       onPass: isCurrentProfile && !discovery.isProcessing
           ? () => unawaited(_react(DiscoveryReaction.pass))
           : null,
-      onLike: isCurrentProfile && !discovery.isProcessing
+      onLike: (isCurrentProfile || isLikesProfile) && !discovery.isProcessing
           ? () => unawaited(_react(DiscoveryReaction.like))
           : null,
-      onRetryReaction: discovery.failedReaction != null
+      onRetryReaction: isReactionTarget && discovery.failedReaction != null
           ? () => unawaited(_retryReaction())
           : null,
     );
@@ -85,11 +99,16 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
   Future<void> _react(DiscoveryReaction reaction) async {
     final controller = ref.read(discoveryControllerProvider.notifier);
-    final result = reaction == DiscoveryReaction.like
+    final target = _likesReactionTarget();
+    final result = widget.fromLikes
+        ? target == null || reaction != DiscoveryReaction.like
+              ? null
+              : await controller.likeProfile(target)
+        : reaction == DiscoveryReaction.like
         ? await controller.like()
         : await controller.pass();
     if (!mounted || result == null) return;
-    if (!result.isMatch) context.go(Routes.discover);
+    await _finishReaction(result, target: target);
   }
 
   Future<void> _retryReaction() async {
@@ -97,7 +116,53 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         .read(discoveryControllerProvider.notifier)
         .retryReaction();
     if (!mounted || result == null) return;
-    if (!result.isMatch) context.go(Routes.discover);
+    await _finishReaction(result, target: _likesReactionTarget());
+  }
+
+  DiscoveryProfile? _likesReactionTarget() {
+    if (!widget.fromLikes) return null;
+    final loaded = ref
+        .read(publicProfileControllerProvider(widget.userId))
+        .profile;
+    if (loaded == null) return widget.initialProfile;
+    return DiscoveryProfile(
+      id: loaded.id,
+      firstName: loaded.firstName,
+      dateOfBirth: loaded.dateOfBirth,
+      city: loaded.city,
+      aboutMe: loaded.aboutMe,
+      photoUrl: loaded.heroPhotoUrl,
+      interests: loaded.interests
+          .map(
+            (interest) =>
+                DiscoveryInterest(id: interest.id, label: interest.label),
+          )
+          .toList(growable: false),
+      attributes: loaded.facts,
+    );
+  }
+
+  Future<void> _finishReaction(
+    DiscoveryReactionResult result, {
+    DiscoveryProfile? target,
+  }) async {
+    if (!widget.fromLikes) {
+      if (!result.isMatch) context.go(Routes.discover);
+      return;
+    }
+    ref
+        .read(likesControllerProvider.notifier)
+        .resolveIncoming(widget.userId, isMatch: result.isMatch);
+    if (result.isMatch) {
+      final profile = target ?? widget.initialProfile;
+      context.go(Routes.matchFor(widget.userId), extra: profile);
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Routes.likes);
+    }
   }
 }
 
@@ -117,6 +182,7 @@ class PublicProfileView extends StatelessWidget {
     this.passLoading = false,
     this.likeLoading = false,
     this.reactionError,
+    this.showPassAction = true,
   });
 
   final PublicProfileState state;
@@ -131,6 +197,7 @@ class PublicProfileView extends StatelessWidget {
   final bool passLoading;
   final bool likeLoading;
   final Object? reactionError;
+  final bool showPassAction;
 
   @override
   Widget build(BuildContext context) {
@@ -188,6 +255,7 @@ class PublicProfileView extends StatelessWidget {
                         onLike: onLike,
                         passLoading: passLoading,
                         likeLoading: likeLoading,
+                        showPass: showPassAction,
                       ),
                     ],
                   ),

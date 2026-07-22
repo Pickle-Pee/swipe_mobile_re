@@ -123,7 +123,8 @@ See who already likes you
 Names, ages, cities, mutual state, and image semantics are unavailable to
 screen readers and pointer interaction while locked. The count remains real.
 The UI does not fabricate demand when the incoming list is empty; it shows an
-honest empty state and no fake cards or count.
+honest empty state and no fake cards or count. An inactive user may still open
+the real Premium plans from that state, alongside the route back to Discovery.
 
 The premium overlay is solid/translucent rather than another blur region. The
 entire locked media layer may use one bounded foreground image filter; it does
@@ -153,7 +154,7 @@ Match or Chat flow is introduced.
 | Likes loading | stable two-column skeleton | navigation |
 | inactive + incoming data | obscured real grid and premium gate | View plans |
 | active + incoming data | real lazy grid | open profile |
-| empty incoming | honest `New likes will appear here` state | Discover |
+| empty incoming | honest `New likes will appear here` state | Discover / View plans when inactive |
 | initial error | solid safe error state | Retry |
 | refresh error with data | retained content and compact live-region error | Retry |
 | missing/broken image | branded bounded placeholder | normal valid action |

@@ -95,6 +95,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           }
           return PublicProfileScreen(
             userId: userId,
+            fromLikes: state.uri.queryParameters['source'] == 'likes',
             initialProfile: state.extra is DiscoveryProfile
                 ? state.extra! as DiscoveryProfile
                 : null,

@@ -13,6 +13,8 @@ class Routes {
   static const premium = '/premium';
 
   static String publicProfileFor(int userId) => '/discover/profile/$userId';
+  static String publicProfileFromLikesFor(int userId) =>
+      '/discover/profile/$userId?source=likes';
   static String matchFor(int userId) => '/match/$userId';
   static String chatFor(int chatId) => '/chat/$chatId';
 }

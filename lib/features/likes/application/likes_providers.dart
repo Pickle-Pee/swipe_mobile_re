@@ -22,11 +22,15 @@ class LikesState {
   final Object? error;
 
   List<LikesUser> get visible => switch (category) {
-    LikesCategory.likedMe => data?.likedMe ?? const [],
+    LikesCategory.likedMe => data?.pendingIncoming ?? const [],
     LikesCategory.likedUsers => data?.likedUsers ?? const [],
     LikesCategory.favorites => data?.favorites ?? const [],
     LikesCategory.mutual => data?.mutual ?? const [],
   };
+
+  int? get incomingCount => data?.pendingIncoming.length;
+  bool get isInitialLoading => status == LikesStatus.loading && data == null;
+  bool get isRefreshing => status == LikesStatus.loading && data != null;
 }
 
 final likesRepositoryProvider = Provider<LikesRepository>((ref) {
@@ -69,14 +73,26 @@ class LikesController extends Notifier<LikesState> {
 
   void select(LikesCategory category) {
     state = LikesState(
-      status: LikesStatus.data,
+      status: state.data == null ? state.status : LikesStatus.data,
       category: category,
       data: state.data,
     );
     _updateEmptyStatus();
   }
 
+  void resolveIncoming(int userId, {required bool isMatch}) {
+    final data = state.data;
+    if (data == null) return;
+    state = LikesState(
+      status: LikesStatus.data,
+      category: state.category,
+      data: data.resolveIncoming(userId, isMatch: isMatch),
+    );
+    _updateEmptyStatus();
+  }
+
   void _updateEmptyStatus() {
+    if (state.data == null) return;
     if (state.visible.isEmpty) {
       state = LikesState(
         status: LikesStatus.empty,

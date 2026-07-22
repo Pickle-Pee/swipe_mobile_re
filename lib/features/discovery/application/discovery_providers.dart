@@ -13,7 +13,9 @@ class DiscoveryState {
     this.status = DiscoveryStatus.initial,
     this.profiles = const [],
     this.processingReaction,
+    this.processingProfileId,
     this.failedReaction,
+    this.failedProfile,
     this.emptyReason,
     this.error,
     this.lastReaction,
@@ -23,7 +25,9 @@ class DiscoveryState {
   final DiscoveryStatus status;
   final List<DiscoveryProfile> profiles;
   final DiscoveryReaction? processingReaction;
+  final int? processingProfileId;
   final DiscoveryReaction? failedReaction;
+  final DiscoveryProfile? failedProfile;
   final DiscoveryEmptyReason? emptyReason;
   final Object? error;
   final DiscoveryReactionResult? lastReaction;
@@ -45,6 +49,7 @@ final discoveryControllerProvider =
 class DiscoveryController extends Notifier<DiscoveryState> {
   final Set<int> _reactedProfileIds = <int>{};
   int? _activeUserId;
+  bool _failedReactionCoordinatesMatch = true;
 
   DiscoveryRepository get _repository => ref.read(discoveryRepositoryProvider);
 
@@ -96,19 +101,32 @@ class DiscoveryController extends Notifier<DiscoveryState> {
   Future<DiscoveryReactionResult?> like() => _react(DiscoveryReaction.like);
   Future<DiscoveryReactionResult?> pass() => _react(DiscoveryReaction.pass);
 
+  Future<DiscoveryReactionResult?> likeProfile(DiscoveryProfile profile) =>
+      _react(DiscoveryReaction.like, target: profile, coordinateMatch: false);
+
   Future<DiscoveryReactionResult?> retryReaction() async {
     final reaction = state.failedReaction;
-    return reaction == null ? null : _react(reaction);
+    if (reaction == null) return null;
+    return _react(
+      reaction,
+      target: state.failedProfile,
+      coordinateMatch: _failedReactionCoordinatesMatch,
+    );
   }
 
-  Future<DiscoveryReactionResult?> _react(DiscoveryReaction reaction) async {
-    final current = state.current;
+  Future<DiscoveryReactionResult?> _react(
+    DiscoveryReaction reaction, {
+    DiscoveryProfile? target,
+    bool coordinateMatch = true,
+  }) async {
+    final current = target ?? state.current;
     if (current == null || state.isProcessing) return null;
     final activeUserId = _activeUserId;
     state = DiscoveryState(
-      status: DiscoveryStatus.data,
+      status: state.status,
       profiles: state.profiles,
       processingReaction: reaction,
+      processingProfileId: current.id,
       emptyReason: state.emptyReason,
       lastReaction: state.lastReaction,
     );
@@ -116,23 +134,34 @@ class DiscoveryController extends Notifier<DiscoveryState> {
       final result = await _repository.react(current.id, reaction);
       if (_activeUserId != activeUserId) return null;
       _reactedProfileIds.add(current.id);
-      final remaining = state.profiles.skip(1).toList();
+      final targetWasInFeed = state.profiles.any(
+        (profile) => profile.id == current.id,
+      );
+      final remaining = state.profiles
+          .where((profile) => profile.id != current.id)
+          .toList(growable: false);
       state = DiscoveryState(
-        status: remaining.isEmpty
-            ? DiscoveryStatus.empty
-            : DiscoveryStatus.data,
+        status: targetWasInFeed
+            ? remaining.isEmpty
+                  ? DiscoveryStatus.empty
+                  : DiscoveryStatus.data
+            : state.status,
         profiles: remaining,
-        emptyReason: remaining.isEmpty ? DiscoveryEmptyReason.endOfFeed : null,
+        emptyReason: targetWasInFeed && remaining.isEmpty
+            ? DiscoveryEmptyReason.endOfFeed
+            : state.emptyReason,
         lastReaction: result,
-        matchedProfile: result.isMatch ? current : null,
+        matchedProfile: coordinateMatch && result.isMatch ? current : null,
       );
       return result;
     } on Object catch (error) {
       if (_activeUserId != activeUserId) return null;
+      _failedReactionCoordinatesMatch = coordinateMatch;
       state = DiscoveryState(
-        status: DiscoveryStatus.error,
+        status: coordinateMatch ? DiscoveryStatus.error : state.status,
         profiles: state.profiles,
         failedReaction: reaction,
+        failedProfile: current,
         emptyReason: state.emptyReason,
         error: error,
         lastReaction: state.lastReaction,
@@ -146,7 +175,9 @@ class DiscoveryController extends Notifier<DiscoveryState> {
       status: state.status,
       profiles: state.profiles,
       processingReaction: state.processingReaction,
+      processingProfileId: state.processingProfileId,
       failedReaction: state.failedReaction,
+      failedProfile: state.failedProfile,
       emptyReason: state.emptyReason,
       error: state.error,
       lastReaction: state.lastReaction,
