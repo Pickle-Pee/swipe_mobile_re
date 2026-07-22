@@ -160,6 +160,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   ) {
     final previousLength = previous?.messages.length ?? 0;
     final added = next.messages.length - previousLength;
+    if (_isOlderPagePrepend(previous, next)) {
+      _preserveScrollAfterPrepend();
+      return;
+    }
     if (previous?.isLoading == true &&
         !next.isLoading &&
         next.messages.isNotEmpty) {
@@ -177,6 +181,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     setState(() {
       _unreadBelow += added;
       _showScrollToBottom = true;
+    });
+  }
+
+  bool _isOlderPagePrepend(
+    ChatMessagesState? previous,
+    ChatMessagesState next,
+  ) {
+    if (previous == null ||
+        !previous.isLoadingOlder ||
+        next.isLoadingOlder ||
+        previous.messages.isEmpty ||
+        next.messages.length <= previous.messages.length) {
+      return false;
+    }
+    return _sameMessage(previous.messages.last, next.messages.last) &&
+        !_sameMessage(previous.messages.first, next.messages.first);
+  }
+
+  bool _sameMessage(ChatMessage first, ChatMessage second) {
+    if (first.id != null || second.id != null) return first.id == second.id;
+    return first.localId == second.localId;
+  }
+
+  void _preserveScrollAfterPrepend() {
+    if (!_scrollController.hasClients) return;
+    final oldMaxScrollExtent = _scrollController.position.maxScrollExtent;
+    final oldPixels = _scrollController.position.pixels;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      final extentDelta = position.maxScrollExtent - oldMaxScrollExtent;
+      if (extentDelta <= 0) return;
+      final target = (oldPixels + extentDelta).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      );
+      position.jumpTo(target);
     });
   }
 
