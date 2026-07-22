@@ -27,7 +27,9 @@ class ProfileMediaCard extends StatelessWidget {
           _OptionalHero(
             tag: heroTag,
             child: imageProvider == null
-                ? const ProfileMediaPlaceholder()
+                ? const ProfileMediaPlaceholder(
+                    key: Key('profile-media-missing'),
+                  )
                 : RepaintBoundary(
                     child: Image(
                       image: imageProvider!,
@@ -43,7 +45,9 @@ class ProfileMediaCard extends StatelessWidget {
                             );
                           },
                       errorBuilder: (context, error, stackTrace) {
-                        return const ProfileMediaPlaceholder();
+                        return const ProfileMediaPlaceholder(
+                          key: Key('profile-media-missing'),
+                        );
                       },
                     ),
                   ),
@@ -76,7 +80,6 @@ class ProfileMediaPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      key: const Key('profile-media-missing'),
       image: true,
       label: semanticLabel ?? 'Profile photo unavailable',
       child: const DecoratedBox(

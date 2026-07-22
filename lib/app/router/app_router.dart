@@ -7,6 +7,7 @@ import '../../features/auth/presentation/phone_auth_screen.dart';
 import '../../features/discovery/discovery_screen.dart';
 import '../../features/discovery/domain/discovery_models.dart';
 import '../../features/likes/likes_screen.dart';
+import '../../features/match/match_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/registration_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -93,6 +94,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             return const DiscoveryScreen();
           }
           return PublicProfileScreen(
+            userId: userId,
+            initialProfile: state.extra is DiscoveryProfile
+                ? state.extra! as DiscoveryProfile
+                : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: Routes.match,
+        builder: (context, state) {
+          final userId = int.tryParse(state.pathParameters['userId'] ?? '');
+          if (userId == null) {
+            return const DiscoveryScreen();
+          }
+          return MatchScreen(
             userId: userId,
             initialProfile: state.extra is DiscoveryProfile
                 ? state.extra! as DiscoveryProfile

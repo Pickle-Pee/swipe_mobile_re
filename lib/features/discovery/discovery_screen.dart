@@ -40,7 +40,9 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
       if (matched != null && previous?.matchedProfile == null) {
         ref.read(discoveryControllerProvider.notifier).consumeMatch();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) unawaited(_showMatch(matched));
+          if (mounted) {
+            context.go(Routes.matchFor(matched.id), extra: matched);
+          }
         });
       }
     });
@@ -81,19 +83,6 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
       unawaited(controller.retryReaction());
     } else {
       unawaited(controller.load());
-    }
-  }
-
-  Future<void> _showMatch(DiscoveryProfile profile) async {
-    final write = await showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      barrierColor: Colors.black.withValues(alpha: 0.68),
-      builder: (context) => _MatchSheet(profile: profile),
-    );
-    if (write == true && mounted) {
-      context.go('${Routes.chats}?userId=${profile.id}');
     }
   }
 }
@@ -380,93 +369,6 @@ class _InlineDiscoveryError extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MatchSheet extends StatelessWidget {
-  const _MatchSheet({required this.profile});
-
-  final DiscoveryProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final image = _profileImage(profile);
-    final name = profile.firstName.trim();
-    return GlassSheet(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 42,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTokens.glassHighlight,
-              borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-            ),
-          ),
-          const SizedBox(height: AppTokens.space24),
-          ClipOval(
-            child: SizedBox.square(
-              dimension: 96,
-              child: image == null
-                  ? const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: AppTokens.missingMediaGradient,
-                      ),
-                      child: Icon(
-                        Icons.person_outline_rounded,
-                        size: 48,
-                        color: AppTokens.textMuted,
-                      ),
-                    )
-                  : Image(
-                      image: image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: AppTokens.missingMediaGradient,
-                            ),
-                            child: Icon(Icons.person_outline_rounded, size: 48),
-                          ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: AppTokens.space16),
-          Text(
-            "It's a match!",
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
-          const SizedBox(height: AppTokens.space8),
-          Text(
-            name.isEmpty
-                ? 'You liked each other.'
-                : 'You and $name liked each other.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: AppTokens.space24),
-          Row(
-            children: [
-              Expanded(
-                child: SecondaryActionButton(
-                  label: 'Keep exploring',
-                  onPressed: () => Navigator.pop(context, false),
-                ),
-              ),
-              const SizedBox(width: AppTokens.space12),
-              Expanded(
-                child: PrimaryActionButton(
-                  label: 'Write',
-                  icon: Icons.chat_bubble_rounded,
-                  onPressed: () => Navigator.pop(context, true),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

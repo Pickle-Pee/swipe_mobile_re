@@ -15,6 +15,7 @@ import '../discovery/domain/discovery_models.dart';
 import '../discovery/application/discovery_providers.dart';
 import 'application/public_profile_providers.dart';
 import 'domain/profile_models.dart';
+import 'domain/public_profile_seed.dart';
 
 typedef PublicProfileImageProviderBuilder =
     ImageProvider<Object>? Function(String? photoUrl);
@@ -78,7 +79,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     unawaited(
       ref
           .read(publicProfileControllerProvider(widget.userId).notifier)
-          .load(seed: _seedFromDiscovery(widget.initialProfile)),
+          .load(seed: publicProfileSeedFromDiscovery(widget.initialProfile)),
     );
   }
 
@@ -496,30 +497,6 @@ class _PublicProfileStateFrame extends StatelessWidget {
       ),
     );
   }
-}
-
-PublicUserProfile? _seedFromDiscovery(DiscoveryProfile? source) {
-  if (source == null) return null;
-  final photoUrl = source.photoUrl?.trim();
-  return PublicUserProfile(
-    id: source.id,
-    firstName: source.firstName,
-    lastName: '',
-    dateOfBirth: source.dateOfBirth,
-    gender: '',
-    city: source.city,
-    aboutMe: source.aboutMe,
-    avatarUrl: source.photoUrl,
-    interests: source.interests
-        .map(
-          (interest) => ProfileInterest(id: interest.id, label: interest.label),
-        )
-        .toList(growable: false),
-    photos: photoUrl == null || photoUrl.isEmpty
-        ? const []
-        : [ProfilePhoto(id: -1, url: photoUrl, isAvatar: true)],
-    facts: source.attributes,
-  );
 }
 
 ImageProvider<Object>? _networkProfileImage(String? value) {
