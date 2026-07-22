@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/core/network/api_client.dart';
+import 'package:swipe_mobile_re/features/chat/domain/chat_models.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_repository.dart';
 
 void main() {
@@ -15,6 +16,9 @@ void main() {
           'created_at': '2026-07-12T12:30:00',
           'last_message': 'Hello',
           'unread_count': 2,
+          'last_message_status': 2,
+          'last_message_sender_id': 1,
+          'last_message_type': 'text',
           'user': {
             'user_id': 9,
             'first_name': 'API user',
@@ -33,6 +37,9 @@ void main() {
     expect(chats.single.user.firstName, 'API user');
     expect(chats.single.lastMessage, 'Hello');
     expect(chats.single.unreadCount, 2);
+    expect(chats.single.lastMessageStatus, ChatMessageStatus.read);
+    expect(chats.single.lastMessageSenderId, 1);
+    expect(chats.single.lastMessageType, ChatMessageType.text);
   });
 
   test('createChat returns backend id', () async {

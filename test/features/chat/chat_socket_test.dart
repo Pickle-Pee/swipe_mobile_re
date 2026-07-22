@@ -62,6 +62,39 @@ void main() {
       expect(transport.disconnectCalls, 1);
     },
   );
+
+  test(
+    'exposes real connection states and removes every listener on dispose',
+    () async {
+      final backend = MemoryStorage();
+      final storage = SessionStorage(backend: backend);
+      final transport = FakeSocketTransport();
+      await storage.saveTokens('token', 'refresh');
+      final manager = ChatSocketManager(transport: transport, storage: storage);
+      final states = <ChatConnectionState>[];
+      final subscription = manager.connectionStates.listen(states.add);
+
+      await manager.connect();
+      expect(manager.connectionState, ChatConnectionState.connecting);
+      transport.connectedValue = true;
+      transport.fire('connect');
+      await pumpEventQueue();
+      transport.fire('auth_response', {'status': 200});
+      await pumpEventQueue();
+      expect(manager.connectionState, ChatConnectionState.connected);
+
+      transport.fire('disconnect');
+      expect(manager.connectionState, ChatConnectionState.reconnecting);
+      transport.fire('connect_error');
+      expect(manager.connectionState, ChatConnectionState.failed);
+      expect(states, contains(ChatConnectionState.connected));
+
+      await subscription.cancel();
+      await manager.dispose();
+      await storage.dispose();
+      expect(transport.handlers, isEmpty);
+    },
+  );
 }
 
 class MemoryStorage implements SecureStorageBackend {
