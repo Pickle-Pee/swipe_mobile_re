@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -113,6 +115,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 : () => ref
                       .read(chatMessagesControllerProvider(chatId).notifier)
                       .retryHistory(),
+            onRetryOlder: chatId == null
+                ? () {}
+                : () => ref
+                      .read(chatMessagesControllerProvider(chatId).notifier)
+                      .retryOlder(),
             onRetryMessage: chatId == null
                 ? (_) {}
                 : (localId) => ref
@@ -175,6 +182,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _handleScroll() {
     if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels <= 160) {
+      final chatId = _chatId;
+      if (chatId != null) {
+        unawaited(
+          ref.read(chatMessagesControllerProvider(chatId).notifier).loadOlder(),
+        );
+      }
+    }
     final shouldShow = !_isNearBottom;
     if (shouldShow == _showScrollToBottom &&
         (shouldShow || _unreadBelow == 0)) {
@@ -263,6 +278,7 @@ class ChatConversationView extends StatelessWidget {
     required this.onOpenProfile,
     required this.onRetryDetails,
     required this.onRetryHistory,
+    required this.onRetryOlder,
     required this.onRetryMessage,
     required this.onSend,
     required this.onScrollToBottom,
@@ -284,6 +300,7 @@ class ChatConversationView extends StatelessWidget {
   final VoidCallback? onOpenProfile;
   final VoidCallback onRetryDetails;
   final VoidCallback onRetryHistory;
+  final VoidCallback onRetryOlder;
   final ValueChanged<String> onRetryMessage;
   final VoidCallback onSend;
   final VoidCallback onScrollToBottom;
@@ -345,6 +362,7 @@ class ChatConversationView extends StatelessWidget {
                           currentUserId: currentUserId,
                           scrollController: scrollController,
                           onRetryHistory: onRetryHistory,
+                          onRetryOlder: onRetryOlder,
                           onRetryMessage: onRetryMessage,
                           imageProviderBuilder: imageProviderBuilder,
                         ),

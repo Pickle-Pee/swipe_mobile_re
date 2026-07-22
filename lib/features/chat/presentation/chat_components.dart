@@ -519,6 +519,7 @@ class MessageList extends StatelessWidget {
     required this.currentUserId,
     required this.scrollController,
     required this.onRetryHistory,
+    required this.onRetryOlder,
     required this.onRetryMessage,
     this.imageProviderBuilder,
   });
@@ -527,6 +528,7 @@ class MessageList extends StatelessWidget {
   final int? currentUserId;
   final ScrollController scrollController;
   final VoidCallback onRetryHistory;
+  final VoidCallback onRetryOlder;
   final ValueChanged<String> onRetryMessage;
   final ChatImageProviderBuilder? imageProviderBuilder;
 
@@ -563,10 +565,16 @@ class MessageList extends StatelessWidget {
         AppTokens.space16,
         AppTokens.space20,
       ),
-      itemCount: state.messages.length,
+      itemCount: state.messages.length + 1,
       itemBuilder: (context, index) {
-        final message = state.messages[index];
-        final previous = index == 0 ? null : state.messages[index - 1];
+        if (index == 0) {
+          return _OlderHistoryStatus(state: state, onRetry: onRetryOlder);
+        }
+        final messageIndex = index - 1;
+        final message = state.messages[messageIndex];
+        final previous = messageIndex == 0
+            ? null
+            : state.messages[messageIndex - 1];
         final showDay =
             previous == null ||
             !ChatTimeFormatter.isSameDay(
@@ -594,6 +602,56 @@ class MessageList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _OlderHistoryStatus extends StatelessWidget {
+  const _OlderHistoryStatus({required this.state, required this.onRetry});
+
+  final ChatMessagesState state;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isLoadingOlder) {
+      return Semantics(
+        liveRegion: true,
+        label: 'Loading earlier messages',
+        child: const SizedBox(
+          key: Key('chat-history-older-loading'),
+          height: AppTokens.minTouchTarget,
+          child: Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      );
+    }
+    if (state.loadOlderError != null) {
+      return Center(
+        child: TextButton.icon(
+          key: const Key('chat-history-older-retry'),
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text('Load earlier messages'),
+        ),
+      );
+    }
+    if (state.hasMore) {
+      return const SizedBox(height: AppTokens.space4);
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTokens.space8),
+      child: Text(
+        'Beginning of conversation',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: AppTokens.textMuted),
+      ),
     );
   }
 }
