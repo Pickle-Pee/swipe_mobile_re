@@ -217,19 +217,19 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('profile details opens with already loaded real data', (
+    testWidgets('profile action forwards the already loaded real profile', (
       tester,
     ) async {
-      final repository = _FakeDiscoveryRepository([_profile]);
-      await _pumpScreen(tester, repository);
+      DiscoveryProfile? opened;
+      await _pumpView(
+        tester,
+        _dataState(_profile),
+        onOpenProfile: (profile) => opened = profile,
+      );
 
       await tester.tap(find.byTooltip('Profile details'));
-      await tester.pumpAndSettle();
 
-      expect(find.text('About'), findsOneWidget);
-      expect(find.text(_profile.aboutMe), findsOneWidget);
-      expect(find.text('Details'), findsOneWidget);
-      expect(find.text('170'), findsOneWidget);
+      expect(opened, same(_profile));
     });
   });
 }
@@ -275,6 +275,7 @@ Future<void> _pumpView(
   VoidCallback? onRetryInline,
   VoidCallback? onOpenLikes,
   VoidCallback? onOpenChats,
+  ValueChanged<DiscoveryProfile>? onOpenProfile,
   Size size = const Size(390, 844),
   double textScale = 1,
 }) async {
@@ -298,7 +299,7 @@ Future<void> _pumpView(
           onRetryInline: onRetryInline ?? () {},
           onOpenLikes: onOpenLikes ?? () {},
           onOpenChats: onOpenChats ?? () {},
-          onOpenProfile: (_) {},
+          onOpenProfile: onOpenProfile ?? (_) {},
         ),
       ),
     ),

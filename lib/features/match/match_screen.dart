@@ -354,6 +354,7 @@ class MatchPhotoPair extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
+      explicitChildNodes: true,
       label: 'Your photo and ${matchedLabel.isEmpty ? 'match' : matchedLabel}',
       child: RepaintBoundary(
         child: SizedBox(
@@ -367,9 +368,12 @@ class MatchPhotoPair extends StatelessWidget {
                 child: Transform.rotate(
                   angle: -0.055,
                   child: _MatchPhoto(
+                    key: const Key('match-current-photo'),
                     image: currentImage,
-                    semanticLabel: currentLabel.isEmpty
+                    semanticLabel: currentImage == null
                         ? 'Your profile photo unavailable'
+                        : currentLabel.isEmpty
+                        ? 'Your profile photo'
                         : 'Profile photo of $currentLabel',
                   ),
                 ),
@@ -379,9 +383,12 @@ class MatchPhotoPair extends StatelessWidget {
                 child: Transform.rotate(
                   angle: 0.055,
                   child: _MatchPhoto(
+                    key: const Key('match-matched-photo'),
                     image: matchedImage,
-                    semanticLabel: matchedLabel.isEmpty
+                    semanticLabel: matchedImage == null
                         ? 'Matched profile photo unavailable'
+                        : matchedLabel.isEmpty
+                        ? 'Matched profile photo'
                         : 'Profile photo of $matchedLabel',
                   ),
                 ),
@@ -401,39 +408,50 @@ class MatchPhotoPair extends StatelessWidget {
 }
 
 class _MatchPhoto extends StatelessWidget {
-  const _MatchPhoto({required this.image, required this.semanticLabel});
+  const _MatchPhoto({
+    super.key,
+    required this.image,
+    required this.semanticLabel,
+  });
 
   final ImageProvider<Object>? image;
   final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 142,
-      height: 154,
-      padding: const EdgeInsets.all(AppTokens.space4),
-      decoration: BoxDecoration(
-        color: AppTokens.surfaceSolid,
-        borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),
-        border: Border.all(color: AppTokens.glassHighlight),
-        boxShadow: AppTokens.surfaceShadow(),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
-        child: image == null
-            ? ProfileMediaPlaceholder(semanticLabel: semanticLabel)
-            : Image(
-                image: image!,
-                fit: BoxFit.cover,
-                semanticLabel: semanticLabel,
-                frameBuilder: (context, child, frame, loaded) {
-                  if (loaded || frame != null) return child;
-                  return const SkeletonLoader(radius: AppTokens.radiusLarge);
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return ProfileMediaPlaceholder(semanticLabel: semanticLabel);
-                },
-              ),
+    return Semantics(
+      container: true,
+      image: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
+        width: 142,
+        height: 154,
+        padding: const EdgeInsets.all(AppTokens.space4),
+        decoration: BoxDecoration(
+          color: AppTokens.surfaceSolid,
+          borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),
+          border: Border.all(color: AppTokens.glassHighlight),
+          boxShadow: AppTokens.surfaceShadow(),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+          child: image == null
+              ? ProfileMediaPlaceholder(semanticLabel: semanticLabel)
+              : Image(
+                  image: image!,
+                  fit: BoxFit.cover,
+                  frameBuilder: (context, child, frame, loaded) {
+                    if (loaded || frame != null) return child;
+                    return const SkeletonLoader(radius: AppTokens.radiusLarge);
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return ProfileMediaPlaceholder(
+                      semanticLabel: semanticLabel,
+                    );
+                  },
+                ),
+        ),
       ),
     );
   }
