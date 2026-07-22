@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +33,11 @@ final chatListControllerProvider =
     NotifierProvider<ChatListController, ChatListState>(ChatListController.new);
 
 class ChatListController extends Notifier<ChatListState> {
+  static const _seenMessageLimit = 512;
+
+  final LinkedHashSet<String> _seenMessages = LinkedHashSet<String>();
+  bool _unknownChatReloadInFlight = false;
+
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
 
   @override
@@ -89,21 +95,66 @@ class ChatListController extends Notifier<ChatListState> {
     }
   }
 
-  void applyMessage(ChatMessage message, {required bool isOpen}) {
+  Future<void> applyMessage(ChatMessage message, {required bool isOpen}) async {
+    final messageKey = message.id == null
+        ? 'local:${message.localId}'
+        : 'server:${message.id}';
+    if (!_seenMessages.add(messageKey)) return;
+    if (_seenMessages.length > _seenMessageLimit) {
+      _seenMessages.remove(_seenMessages.first);
+    }
+
     final index = state.chats.indexWhere((chat) => chat.id == message.chatId);
-    if (index < 0) return;
+    if (index < 0) {
+      if (_unknownChatReloadInFlight) return;
+      _unknownChatReloadInFlight = true;
+      try {
+        await load();
+      } finally {
+        _unknownChatReloadInFlight = false;
+      }
+      return;
+    }
     final chats = [...state.chats];
     final current = chats.removeAt(index);
     chats.insert(
       0,
       current.copyWith(
-        lastMessage: message.text,
+        lastMessage: _messagePreview(message),
         unreadCount: isOpen ? 0 : current.unreadCount + 1,
+        lastMessageStatus: message.status,
+        lastMessageSenderId: message.senderId,
+        lastMessageType: message.type,
       ),
     );
-    state = ChatListState(status: ChatListStatus.data, chats: chats);
+    state = ChatListState(
+      status: ChatListStatus.data,
+      chats: chats,
+      error: state.error,
+      isCreating: state.isCreating,
+    );
+  }
+
+  void markChatOpen(int chatId) {
+    final index = state.chats.indexWhere((chat) => chat.id == chatId);
+    if (index < 0 || state.chats[index].unreadCount == 0) return;
+    final chats = [...state.chats];
+    chats[index] = chats[index].copyWith(unreadCount: 0);
+    state = ChatListState(
+      status: state.status,
+      chats: chats,
+      error: state.error,
+      isCreating: state.isCreating,
+    );
   }
 }
+
+String _messagePreview(ChatMessage message) => switch (message.type) {
+  ChatMessageType.image => 'Image',
+  ChatMessageType.voice => 'Voice message',
+  ChatMessageType.text || ChatMessageType.unknown =>
+    message.text.trim().isEmpty ? 'Message' : message.text.trim(),
+};
 
 final chatSocketManagerProvider = Provider<ChatSocketManager>((ref) {
   final manager = ChatSocketManager(
@@ -115,15 +166,43 @@ final chatSocketManagerProvider = Provider<ChatSocketManager>((ref) {
   return manager;
 });
 
+final chatConnectionStateProvider = StreamProvider<ChatConnectionState>((
+  ref,
+) async* {
+  final manager = ref.watch(chatSocketManagerProvider);
+  yield manager.connectionState;
+  yield* manager.connectionStates;
+});
+
+final activeChatRegistryProvider = Provider<ActiveChatRegistry>((ref) {
+  return ActiveChatRegistry();
+});
+
+class ActiveChatRegistry {
+  int? _chatId;
+
+  int? get chatId => _chatId;
+
+  void open(int chatId) => _chatId = chatId;
+
+  void close(int chatId) {
+    if (_chatId == chatId) _chatId = null;
+  }
+}
+
 final chatRealtimeProvider = Provider<void>((ref) {
   final subscription = ref.watch(chatSocketManagerProvider).events.listen((
     event,
   ) {
     if (event.name != ChatSocketManager.incoming) return;
     final message = ChatMessage.fromJson(event.data);
-    ref
-        .read(chatListControllerProvider.notifier)
-        .applyMessage(message, isOpen: false);
+    final isOpen =
+        ref.read(activeChatRegistryProvider).chatId == message.chatId;
+    unawaited(
+      ref
+          .read(chatListControllerProvider.notifier)
+          .applyMessage(message, isOpen: isOpen),
+    );
   });
   ref.onDispose(subscription.cancel);
 });
@@ -142,8 +221,8 @@ class ChatMessagesState {
   final Object? error;
 }
 
-final chatMessagesControllerProvider =
-    NotifierProvider.family<ChatMessagesController, ChatMessagesState, int>(
+final chatMessagesControllerProvider = NotifierProvider.autoDispose
+    .family<ChatMessagesController, ChatMessagesState, int>(
       ChatMessagesController.new,
     );
 
@@ -164,10 +243,15 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
     return const ChatMessagesState();
   }
 
-  Future<void> send(String rawText) async {
+  Future<bool> send(String rawText) async {
     final text = rawText.trim();
     final userId = ref.read(authControllerProvider).user?.id;
-    if (text.isEmpty || userId == null || state.isSending) return;
+    if (text.isEmpty ||
+        userId == null ||
+        state.isSending ||
+        _socket.connectionState != ChatConnectionState.connected) {
+      return false;
+    }
     final externalId = '${DateTime.now().microsecondsSinceEpoch}-$userId';
     final optimistic = ChatMessage(
       localId: externalId,
@@ -183,11 +267,42 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       isSending: true,
     );
     _socket.sendMessage(chatId: chatId, text: text, externalId: externalId);
-    _replace(
-      externalId,
-      optimistic.copyWith(status: ChatMessageStatus.sent),
-      isSending: true,
+    return true;
+  }
+
+  bool retry(String localId) {
+    if (state.isSending ||
+        _socket.connectionState != ChatConnectionState.connected) {
+      return false;
+    }
+    final index = state.messages.indexWhere(
+      (message) =>
+          message.localId == localId &&
+          message.status == ChatMessageStatus.failed,
     );
+    if (index < 0) return false;
+    final message = state.messages[index];
+    _replace(
+      localId,
+      message.copyWith(status: ChatMessageStatus.sending),
+      isSending: true,
+      clearError: true,
+    );
+    _socket.sendMessage(
+      chatId: chatId,
+      text: message.text,
+      externalId: localId,
+    );
+    return true;
+  }
+
+  void retryHistory() {
+    state = ChatMessagesState(
+      messages: state.messages,
+      isLoading: true,
+      isSending: state.isSending,
+    );
+    _socket.requestHistory(chatId);
   }
 
   void _onEvent(ChatSocketEvent event) {
@@ -213,20 +328,33 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
                 )
                 .toList()
           : <ChatMessage>[];
-      _merge(history, isLoading: false);
+      _merge(history, isLoading: false, clearError: true);
+      final userId = ref.read(authControllerProvider).user?.id;
+      final unreadIds = history
+          .where(
+            (message) =>
+                message.id != null &&
+                message.senderId != userId &&
+                message.status != ChatMessageStatus.read,
+          )
+          .map((message) => message.id!)
+          .toList(growable: false);
+      if (unreadIds.isNotEmpty) {
+        _socket.markDelivered(unreadIds);
+        _socket.markRead(unreadIds);
+      }
+      ref.read(chatListControllerProvider.notifier).markChatOpen(chatId);
       return;
     }
     if (event.name == ChatSocketManager.incoming) {
       if (_int(event.data['chat_id']) != chatId) return;
       final message = ChatMessage.fromJson(event.data, chatId: chatId);
       _merge([message], isLoading: false);
-      if (message.id != null) {
+      final userId = ref.read(authControllerProvider).user?.id;
+      if (message.id != null && message.senderId != userId) {
         _socket.markDelivered([message.id!]);
         _socket.markRead([message.id!]);
       }
-      ref
-          .read(chatListControllerProvider.notifier)
-          .applyMessage(message, isOpen: true);
       return;
     }
     if (event.name == ChatSocketManager.completed) {
@@ -237,17 +365,19 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
           .where((m) => m.localId == localId)
           .firstOrNull;
       if (current == null) return;
-      _replace(
-        localId,
-        current.copyWith(
-          id: _int(event.data['id']),
-          status: _status(event.data['status']),
+      final acknowledged = current.copyWith(
+        id: _int(event.data['id']),
+        status: _status(event.data['status']),
+        createdAt: DateTime.tryParse(
+          event.data['created_at']?.toString() ?? '',
         ),
-        isSending: false,
       );
-      ref
-          .read(chatListControllerProvider.notifier)
-          .applyMessage(current, isOpen: true);
+      _replace(localId, acknowledged, isSending: false, clearError: true);
+      unawaited(
+        ref
+            .read(chatListControllerProvider.notifier)
+            .applyMessage(acknowledged, isOpen: true),
+      );
       return;
     }
     if (event.name == ChatSocketManager.statusUpdate) {
@@ -259,10 +389,53 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
         state.messages[index].localId,
         state.messages[index].copyWith(status: _status(event.data['status'])),
       );
+      return;
+    }
+    if (event.name == ChatSocketManager.allRead) {
+      if (_int(event.data['chat_id']) != chatId) return;
+      final userId = ref.read(authControllerProvider).user?.id;
+      state = ChatMessagesState(
+        messages: [
+          for (final message in state.messages)
+            if (message.senderId == userId)
+              message.copyWith(status: ChatMessageStatus.read)
+            else
+              message,
+        ],
+        isLoading: state.isLoading,
+        isSending: state.isSending,
+        error: state.error,
+      );
+      return;
+    }
+    if (event.name == ChatSocketManager.socketError) {
+      final eventChatId = _int(event.data['chat_id']);
+      if (eventChatId != null && eventChatId != chatId) return;
+      final hasPending = state.messages.any(
+        (message) => message.status == ChatMessageStatus.sending,
+      );
+      state = ChatMessagesState(
+        messages: [
+          for (final message in state.messages)
+            if (message.status == ChatMessageStatus.sending)
+              message.copyWith(status: ChatMessageStatus.failed)
+            else
+              message,
+        ],
+        isLoading: false,
+        isSending: false,
+        error: hasPending
+            ? const ChatSendFailure()
+            : const ChatHistoryFailure(),
+      );
     }
   }
 
-  void _merge(List<ChatMessage> additions, {bool? isLoading}) {
+  void _merge(
+    List<ChatMessage> additions, {
+    bool? isLoading,
+    bool clearError = false,
+  }) {
     final messages = [...state.messages];
     for (final addition in additions) {
       final index = messages.indexWhere(
@@ -281,10 +454,16 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       messages: messages,
       isLoading: isLoading ?? state.isLoading,
       isSending: state.isSending,
+      error: clearError ? null : state.error,
     );
   }
 
-  void _replace(String localId, ChatMessage replacement, {bool? isSending}) {
+  void _replace(
+    String localId,
+    ChatMessage replacement, {
+    bool? isSending,
+    bool clearError = false,
+  }) {
     state = ChatMessagesState(
       messages: [
         for (final message in state.messages)
@@ -292,8 +471,17 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       ],
       isLoading: state.isLoading,
       isSending: isSending ?? state.isSending,
+      error: clearError ? null : state.error,
     );
   }
+}
+
+class ChatSendFailure implements Exception {
+  const ChatSendFailure();
+}
+
+class ChatHistoryFailure implements Exception {
+  const ChatHistoryFailure();
 }
 
 int? _int(Object? value) => switch (value) {

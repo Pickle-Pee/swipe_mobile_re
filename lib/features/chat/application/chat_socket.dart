@@ -50,6 +50,14 @@ class ChatSocketEvent {
   final Map<String, dynamic> data;
 }
 
+enum ChatConnectionState {
+  connecting,
+  connected,
+  reconnecting,
+  offline,
+  failed,
+}
+
 class ChatSocketManager {
   ChatSocketManager({
     required SocketTransport transport,
@@ -66,24 +74,40 @@ class ChatSocketManager {
   static const completed = 'completer';
   static const statusUpdate = 'message_status_update';
   static const allRead = 'all_messages_read';
+  static const socketError = 'error';
 
   final SocketTransport _transport;
   final SessionStorage _storage;
   final _events = StreamController<ChatSocketEvent>.broadcast();
+  final _connectionStates = StreamController<ChatConnectionState>.broadcast();
   final List<MapEntry<String, Object>> _pending = [];
   late final StreamSubscription<String?> _tokenSubscription;
   bool _isAuthenticated = false;
   bool _connectRequested = false;
+  bool _hasConnected = false;
+  ChatConnectionState _connectionState = ChatConnectionState.offline;
 
   Stream<ChatSocketEvent> get events => _events.stream;
+  Stream<ChatConnectionState> get connectionStates => _connectionStates.stream;
   bool get isAuthenticated => _isAuthenticated;
+  ChatConnectionState get connectionState => _connectionState;
 
   Future<void> connect() async {
     if (_connectRequested) return;
     final token = await _storage.readAccessToken();
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) {
+      _setConnectionState(ChatConnectionState.offline);
+      return;
+    }
     _connectRequested = true;
-    if (!_transport.connected) _transport.connect();
+    if (!_transport.connected) {
+      _setConnectionState(
+        _hasConnected
+            ? ChatConnectionState.reconnecting
+            : ChatConnectionState.connecting,
+      );
+      _transport.connect();
+    }
   }
 
   void requestHistory(int chatId) =>
@@ -111,15 +135,42 @@ class ChatSocketManager {
     _isAuthenticated = false;
     _pending.clear();
     if (_transport.connected) _transport.disconnect();
+    _setConnectionState(ChatConnectionState.offline);
   }
 
   void _bindListeners() {
-    _transport.on('connect', (_) => _authenticate());
-    _transport.on('disconnect', (_) => _isAuthenticated = false);
+    _transport.on('connect', (_) {
+      _setConnectionState(
+        _hasConnected
+            ? ChatConnectionState.reconnecting
+            : ChatConnectionState.connecting,
+      );
+      unawaited(_authenticate());
+    });
+    _transport.on('disconnect', (_) {
+      _isAuthenticated = false;
+      _setConnectionState(
+        _connectRequested
+            ? ChatConnectionState.reconnecting
+            : ChatConnectionState.offline,
+      );
+    });
+    _transport.on('reconnect_attempt', (_) {
+      _setConnectionState(ChatConnectionState.reconnecting);
+    });
+    _transport.on('connect_error', (_) {
+      _isAuthenticated = false;
+      _setConnectionState(ChatConnectionState.failed);
+    });
     _transport.on('auth_response', (data) {
       final payload = _map(data);
       _isAuthenticated = payload['status'] == 200;
-      if (!_isAuthenticated) return;
+      if (!_isAuthenticated) {
+        _setConnectionState(ChatConnectionState.failed);
+        return;
+      }
+      _hasConnected = true;
+      _setConnectionState(ChatConnectionState.connected);
       _events.add(ChatSocketEvent(authenticated, payload));
       for (final command in List.of(_pending)) {
         _transport.emit(command.key, command.value);
@@ -131,6 +182,9 @@ class ChatSocketManager {
         _events.add(ChatSocketEvent(event, _map(data)));
       });
     }
+    _transport.on(socketError, (data) {
+      _events.add(ChatSocketEvent(socketError, _map(data)));
+    });
   }
 
   Future<void> _authenticate() async {
@@ -140,6 +194,11 @@ class ChatSocketManager {
       return;
     }
     _isAuthenticated = false;
+    _setConnectionState(
+      _hasConnected
+          ? ChatConnectionState.reconnecting
+          : ChatConnectionState.connecting,
+    );
     _transport.emit('authenticate', {'token': token});
   }
 
@@ -162,6 +221,12 @@ class ChatSocketManager {
     }
   }
 
+  void _setConnectionState(ChatConnectionState value) {
+    if (_connectionState == value || _connectionStates.isClosed) return;
+    _connectionState = value;
+    _connectionStates.add(value);
+  }
+
   Map<String, dynamic> _map(dynamic value) => value is Map
       ? value.map((key, item) => MapEntry(key.toString(), item))
       : <String, dynamic>{};
@@ -177,10 +242,14 @@ class ChatSocketManager {
       completed,
       statusUpdate,
       allRead,
+      socketError,
+      'reconnect_attempt',
+      'connect_error',
     ]) {
       _transport.off(event);
     }
     _transport.dispose();
     await _events.close();
+    await _connectionStates.close();
   }
 }
