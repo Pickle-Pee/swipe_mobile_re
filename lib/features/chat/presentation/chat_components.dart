@@ -558,6 +558,8 @@ class MessageList extends StatelessWidget {
     return ListView.builder(
       key: const PageStorageKey<String>('chat-message-list'),
       controller: scrollController,
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(
         AppTokens.space16,
