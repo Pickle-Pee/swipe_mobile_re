@@ -9,6 +9,26 @@ import 'package:swipe_mobile_re/features/auth/domain/auth_repository.dart';
 import 'package:swipe_mobile_re/features/auth/presentation/phone_auth_screen.dart';
 
 void main() {
+  testWidgets('demo account shortcut fills the seeded user phone', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(DelayedAuthRepository()),
+        ],
+        child: const MaterialApp(home: PhoneAuthScreen()),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('use-demo-account')));
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      '70000000001',
+    );
+  });
+
   testWidgets('double tap sends only one code request', (tester) async {
     final repository = DelayedAuthRepository();
     await tester.pumpWidget(

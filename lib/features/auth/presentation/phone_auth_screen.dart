@@ -25,6 +25,7 @@ class PhoneAuthScreen extends ConsumerStatefulWidget {
 
 class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   static const _resendDelay = 60;
+  static const _demoPhoneNumber = '70000000001';
 
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
@@ -198,6 +199,18 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
                   ),
                 ),
               ),
+              if (!isCodeStep && AppConfig.isDemoMode) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('use-demo-account'),
+                    onPressed: _isSubmitting ? null : _useDemoAccount,
+                    icon: const Icon(Icons.science_outlined, size: 18),
+                    label: const Text('Use demo account · 70000000001'),
+                  ),
+                ),
+              ],
               if (_demoCode != null) ...[
                 const SizedBox(height: 12),
                 SafetyBadge(label: 'Demo verification code: $_demoCode'),
@@ -249,5 +262,10 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
     if (error is ApiException) return error.message;
     if (error is String) return error;
     return 'Something went wrong. Please try again.';
+  }
+
+  void _useDemoAccount() {
+    _phoneController.text = _demoPhoneNumber;
+    setState(() => _error = null);
   }
 }

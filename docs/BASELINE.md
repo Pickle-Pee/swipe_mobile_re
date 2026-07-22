@@ -32,18 +32,32 @@ All environment values are defined in `lib/core/config/config.dart` and supplied
 
 | Define | Purpose | Default |
 | --- | --- | --- |
-| `APP_ENV` | `demo`, `development`, or `production` | `development` |
+| `APP_ENV` | `demo`, `development`, or `production` | `demo` for debug/profile; `production` for release |
 | `REST_API_URL` | REST API base URL | Android emulator host for demo/development |
 | `SOCKET_IO_URL` | Socket.IO base URL | Android emulator host for demo/development |
 | `DEMO_MODE` | Explicit `true`/`false` demo behavior | enabled only for demo |
 
-Demo and development default to `http://10.0.2.2:1024` for REST and `http://10.0.2.2:1025` for Socket.IO. The `10.0.2.2` address reaches the host machine from an Android emulator. A physical device needs reachable LAN addresses. Production has no endpoint defaults: both URLs must be supplied, must be absolute HTTP(S) URLs, and must not use a known local host. Demo mode is rejected in production.
+Debug and profile builds select `demo` when `APP_ENV` is omitted. Demo and
+development default to `http://10.0.2.2:1024` for REST and
+`http://10.0.2.2:1025` for Socket.IO. The `10.0.2.2` address reaches the host
+machine from an Android emulator. A physical device needs reachable LAN
+addresses. Release builds default to `production` and fail closed unless both
+production URLs are supplied; production also rejects known local hosts and
+demo mode.
+
+With the local backend Compose stack running, the seeded fictional account is
+`70000000001`; the backend returns demo verification code `000000`. The phone
+screen exposes a **Use demo account** shortcut. These are public local demo
+values, not credentials or personal data.
 
 Dart defines are visible in the compiled application and must never contain secrets.
 
 ### Run examples
 
 ```powershell
+# Safe default for a debug/profile build on Android Emulator.
+flutter run
+
 flutter run --dart-define=APP_ENV=demo
 
 flutter run `
@@ -67,7 +81,7 @@ flutter pub get
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
-flutter build apk --debug --dart-define=APP_ENV=demo
+flutter build apk --debug
 ```
 
 CI runs dependency installation, formatting, analysis, and tests on pushes and pull requests. Android debug assembly remains a local/release check to keep the minimal CI focused on code quality.

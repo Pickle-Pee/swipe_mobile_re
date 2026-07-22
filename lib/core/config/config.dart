@@ -114,9 +114,10 @@ class EnvironmentConfig {
 class AppConfig {
   AppConfig._();
 
+  static const _isProductBuild = bool.fromEnvironment('dart.vm.product');
   static const _environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'development',
+    defaultValue: _isProductBuild ? 'production' : 'demo',
   );
   static const _restApiUrl = String.fromEnvironment('REST_API_URL');
   static const _socketIoUrl = String.fromEnvironment('SOCKET_IO_URL');

@@ -2,6 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/core/config/config.dart';
 
 void main() {
+  test('non-product builds use the demo environment by default', () {
+    expect(AppConfig.environment, AppEnvironment.demo);
+    expect(AppConfig.isDemoMode, isTrue);
+  });
+
   group('EnvironmentConfig', () {
     test('demo uses Android emulator defaults and enables demo mode', () {
       final config = EnvironmentConfig.resolve(environment: 'demo');
