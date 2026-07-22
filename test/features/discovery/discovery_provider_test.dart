@@ -99,6 +99,29 @@ void main() {
     controller.consumeMatch();
     expect(container.read(discoveryControllerProvider).matchedProfile, isNull);
   });
+
+  test('confirmed reaction stays filtered after Discovery reloads', () async {
+    final repository = FakeDiscoveryRepository([profile]);
+    final container = ProviderContainer(
+      overrides: [discoveryRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(discoveryControllerProvider.notifier);
+    await controller.load();
+
+    final request = controller.like();
+    repository.reactionCompleter.complete(
+      const DiscoveryReactionResult(isMatch: true),
+    );
+    await request;
+    controller.consumeMatch();
+    await controller.load();
+
+    final state = container.read(discoveryControllerProvider);
+    expect(state.status, DiscoveryStatus.empty);
+    expect(state.current, isNull);
+    expect(state.emptyReason, DiscoveryEmptyReason.endOfFeed);
+  });
 }
 
 class FakeDiscoveryRepository implements DiscoveryRepository {

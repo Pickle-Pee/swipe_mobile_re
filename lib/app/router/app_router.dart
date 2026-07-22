@@ -5,10 +5,13 @@ import '../../features/chat/chat_list_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/auth/presentation/phone_auth_screen.dart';
 import '../../features/discovery/discovery_screen.dart';
+import '../../features/discovery/domain/discovery_models.dart';
 import '../../features/likes/likes_screen.dart';
+import '../../features/match/match_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/registration_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/public_profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/subscription/subscription_screen.dart';
 import '../shell/main_shell.dart';
@@ -83,6 +86,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // Non-tab routes
+      GoRoute(
+        path: Routes.publicProfile,
+        builder: (context, state) {
+          final userId = int.tryParse(state.pathParameters['id'] ?? '');
+          if (userId == null) {
+            return const DiscoveryScreen();
+          }
+          return PublicProfileScreen(
+            userId: userId,
+            initialProfile: state.extra is DiscoveryProfile
+                ? state.extra! as DiscoveryProfile
+                : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: Routes.match,
+        builder: (context, state) {
+          final userId = int.tryParse(state.pathParameters['userId'] ?? '');
+          if (userId == null) {
+            return const DiscoveryScreen();
+          }
+          return MatchScreen(
+            userId: userId,
+            initialProfile: state.extra is DiscoveryProfile
+                ? state.extra! as DiscoveryProfile
+                : null,
+          );
+        },
+      ),
       GoRoute(
         path: '/chat/:id',
         builder: (context, state) {

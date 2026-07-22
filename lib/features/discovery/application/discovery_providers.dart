@@ -43,25 +43,47 @@ final discoveryControllerProvider =
     );
 
 class DiscoveryController extends Notifier<DiscoveryState> {
+  final Set<int> _reactedProfileIds = <int>{};
+  int? _activeUserId;
+
   DiscoveryRepository get _repository => ref.read(discoveryRepositoryProvider);
 
   @override
-  DiscoveryState build() => const DiscoveryState();
+  DiscoveryState build() {
+    final userId = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.id),
+    );
+    if (_activeUserId != userId) {
+      _activeUserId = userId;
+      _reactedProfileIds.clear();
+    }
+    return const DiscoveryState();
+  }
 
   Future<void> load() async {
+    final activeUserId = _activeUserId;
     state = DiscoveryState(
       status: DiscoveryStatus.loading,
       profiles: state.profiles,
       emptyReason: state.emptyReason,
     );
     try {
-      final profiles = await _repository.getProfiles();
+      final fetchedProfiles = await _repository.getProfiles();
+      if (_activeUserId != activeUserId) return;
+      final profiles = fetchedProfiles
+          .where((profile) => !_reactedProfileIds.contains(profile.id))
+          .toList(growable: false);
       state = DiscoveryState(
         status: profiles.isEmpty ? DiscoveryStatus.empty : DiscoveryStatus.data,
         profiles: profiles,
-        emptyReason: profiles.isEmpty ? DiscoveryEmptyReason.noProfiles : null,
+        emptyReason: profiles.isEmpty
+            ? fetchedProfiles.isEmpty
+                  ? DiscoveryEmptyReason.noProfiles
+                  : DiscoveryEmptyReason.endOfFeed
+            : null,
       );
     } on Object catch (error) {
+      if (_activeUserId != activeUserId) return;
       state = DiscoveryState(
         status: DiscoveryStatus.error,
         profiles: state.profiles,
@@ -71,17 +93,18 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     }
   }
 
-  Future<void> like() => _react(DiscoveryReaction.like);
-  Future<void> pass() => _react(DiscoveryReaction.pass);
+  Future<DiscoveryReactionResult?> like() => _react(DiscoveryReaction.like);
+  Future<DiscoveryReactionResult?> pass() => _react(DiscoveryReaction.pass);
 
-  Future<void> retryReaction() async {
+  Future<DiscoveryReactionResult?> retryReaction() async {
     final reaction = state.failedReaction;
-    if (reaction != null) await _react(reaction);
+    return reaction == null ? null : _react(reaction);
   }
 
-  Future<void> _react(DiscoveryReaction reaction) async {
+  Future<DiscoveryReactionResult?> _react(DiscoveryReaction reaction) async {
     final current = state.current;
-    if (current == null || state.isProcessing) return;
+    if (current == null || state.isProcessing) return null;
+    final activeUserId = _activeUserId;
     state = DiscoveryState(
       status: DiscoveryStatus.data,
       profiles: state.profiles,
@@ -91,6 +114,8 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     );
     try {
       final result = await _repository.react(current.id, reaction);
+      if (_activeUserId != activeUserId) return null;
+      _reactedProfileIds.add(current.id);
       final remaining = state.profiles.skip(1).toList();
       state = DiscoveryState(
         status: remaining.isEmpty
@@ -101,7 +126,9 @@ class DiscoveryController extends Notifier<DiscoveryState> {
         lastReaction: result,
         matchedProfile: result.isMatch ? current : null,
       );
+      return result;
     } on Object catch (error) {
+      if (_activeUserId != activeUserId) return null;
       state = DiscoveryState(
         status: DiscoveryStatus.error,
         profiles: state.profiles,
@@ -110,6 +137,7 @@ class DiscoveryController extends Notifier<DiscoveryState> {
         error: error,
         lastReaction: state.lastReaction,
       );
+      return null;
     }
   }
 
