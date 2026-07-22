@@ -128,9 +128,24 @@ Future<void> _pumpGolden(
   );
 
   final context = tester.element(find.byType(PublicProfileView));
+  final decodeWidths = <int>{size.width.ceil()};
+  final gallery = find.byKey(const Key('public-profile-gallery'));
+  if (gallery.evaluate().isNotEmpty) {
+    decodeWidths.add(tester.getSize(gallery).width.ceil());
+  }
   await tester.runAsync(() async {
     await precacheImage(_primaryImage, context);
     await precacheImage(_alternateImage, context);
+    for (final width in decodeWidths) {
+      await precacheImage(
+        ResizeImage.resizeIfNeeded(width, null, _primaryImage),
+        context,
+      );
+      await precacheImage(
+        ResizeImage.resizeIfNeeded(width, null, _alternateImage),
+        context,
+      );
+    }
   });
   await tester.pumpAndSettle();
 }

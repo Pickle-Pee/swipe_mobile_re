@@ -153,6 +153,10 @@ class MatchView extends StatefulWidget {
 class _MatchViewState extends State<MatchView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _reveal;
+  late final Animation<double> _photosAnimation;
+  late final Animation<double> _photoScale;
+  late final Animation<double> _titleAnimation;
+  late final Animation<double> _actionsAnimation;
   bool _started = false;
 
   @override
@@ -161,6 +165,19 @@ class _MatchViewState extends State<MatchView>
     _reveal = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
+    );
+    _photosAnimation = CurvedAnimation(
+      parent: _reveal,
+      curve: const Interval(0, 0.58, curve: Curves.easeOutCubic),
+    );
+    _photoScale = Tween<double>(begin: 0.94, end: 1).animate(_photosAnimation);
+    _titleAnimation = CurvedAnimation(
+      parent: _reveal,
+      curve: const Interval(0.28, 0.76, curve: Curves.easeOutCubic),
+    );
+    _actionsAnimation = CurvedAnimation(
+      parent: _reveal,
+      curve: const Interval(0.58, 1, curve: Curves.easeOutCubic),
     );
   }
 
@@ -247,18 +264,6 @@ class _MatchViewState extends State<MatchView>
     final message = name.isEmpty
         ? 'Вы понравились друг другу.'
         : 'У вас взаимная симпатия с $name.';
-    final photosAnimation = CurvedAnimation(
-      parent: _reveal,
-      curve: const Interval(0, 0.58, curve: Curves.easeOutCubic),
-    );
-    final titleAnimation = CurvedAnimation(
-      parent: _reveal,
-      curve: const Interval(0.28, 0.76, curve: Curves.easeOutCubic),
-    );
-    final actionsAnimation = CurvedAnimation(
-      parent: _reveal,
-      curve: const Interval(0.58, 1, curve: Curves.easeOutCubic),
-    );
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -275,12 +280,9 @@ class _MatchViewState extends State<MatchView>
                   children: [
                     const Spacer(),
                     FadeTransition(
-                      opacity: photosAnimation,
+                      opacity: _photosAnimation,
                       child: ScaleTransition(
-                        scale: Tween<double>(
-                          begin: 0.94,
-                          end: 1,
-                        ).animate(photosAnimation),
+                        scale: _photoScale,
                         child: MatchPhotoPair(
                           currentImage: imageBuilder(currentPhoto),
                           matchedImage: imageBuilder(matched.heroPhotoUrl),
@@ -293,7 +295,7 @@ class _MatchViewState extends State<MatchView>
                     ),
                     const SizedBox(height: AppTokens.space32),
                     FadeTransition(
-                      opacity: titleAnimation,
+                      opacity: _titleAnimation,
                       child: Column(
                         children: [
                           Text(
@@ -315,7 +317,7 @@ class _MatchViewState extends State<MatchView>
                     const Spacer(),
                     const SizedBox(height: AppTokens.space32),
                     FadeTransition(
-                      opacity: actionsAnimation,
+                      opacity: _actionsAnimation,
                       child: MatchActionPanel(
                         openingChat: widget.openingChat,
                         chatError: widget.chatError == null
@@ -419,6 +421,13 @@ class _MatchPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedImage = image == null
+        ? null
+        : ResizeImage.resizeIfNeeded(
+            (142 * MediaQuery.devicePixelRatioOf(context)).ceil(),
+            null,
+            image!,
+          );
     return Semantics(
       container: true,
       image: true,
@@ -436,10 +445,10 @@ class _MatchPhoto extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
-          child: image == null
+          child: resolvedImage == null
               ? ProfileMediaPlaceholder(semanticLabel: semanticLabel)
               : Image(
-                  image: image!,
+                  image: resolvedImage,
                   fit: BoxFit.cover,
                   frameBuilder: (context, child, frame, loaded) {
                     if (loaded || frame != null) return child;

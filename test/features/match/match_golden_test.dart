@@ -100,6 +100,14 @@ Future<void> _pumpGolden(
   await tester.runAsync(() async {
     await precacheImage(_currentImage, context);
     await precacheImage(_matchedImage, context);
+    await precacheImage(
+      ResizeImage.resizeIfNeeded(142, null, _currentImage),
+      context,
+    );
+    await precacheImage(
+      ResizeImage.resizeIfNeeded(142, null, _matchedImage),
+      context,
+    );
   });
   await tester.pumpAndSettle();
 }

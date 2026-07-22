@@ -38,6 +38,7 @@ class ProfileHero extends StatelessWidget {
             children: [
               _BoundedProfileImage(
                 imageProvider: imageProvider,
+                targetWidth: MediaQuery.sizeOf(context).width,
                 semanticLabel: profile.displayName.trim().isEmpty
                     ? 'Profile photo'
                     : 'Profile photo of ${profile.displayName.trim()}',
@@ -187,6 +188,7 @@ class _ProfilePhotoGalleryState extends State<ProfilePhotoGallery> {
                           ),
                           child: _BoundedProfileImage(
                             imageProvider: widget.imageProviderBuilder(photo),
+                            targetWidth: constraints.maxWidth,
                             semanticLabel:
                                 'Additional profile photo ${index + 1}',
                           ),
@@ -404,10 +406,12 @@ class _FactRow extends StatelessWidget {
 class _BoundedProfileImage extends StatelessWidget {
   const _BoundedProfileImage({
     required this.imageProvider,
+    required this.targetWidth,
     required this.semanticLabel,
   });
 
   final ImageProvider<Object>? imageProvider;
+  final double targetWidth;
   final String semanticLabel;
 
   @override
@@ -416,8 +420,12 @@ class _BoundedProfileImage extends StatelessWidget {
     if (provider == null) {
       return ProfileMediaPlaceholder(semanticLabel: semanticLabel);
     }
+    final decodeWidth = (targetWidth * MediaQuery.devicePixelRatioOf(context))
+        .ceil()
+        .clamp(1, 4096)
+        .toInt();
     return Image(
-      image: provider,
+      image: ResizeImage.resizeIfNeeded(decodeWidth, null, provider),
       fit: BoxFit.cover,
       semanticLabel: semanticLabel,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
