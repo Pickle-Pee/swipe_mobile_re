@@ -29,6 +29,9 @@ class ChatSummary {
     required this.createdAt,
     required this.lastMessage,
     required this.unreadCount,
+    this.lastMessageStatus,
+    this.lastMessageSenderId,
+    this.lastMessageType,
   });
 
   final int id;
@@ -36,13 +39,25 @@ class ChatSummary {
   final DateTime? createdAt;
   final String? lastMessage;
   final int unreadCount;
+  final ChatMessageStatus? lastMessageStatus;
+  final int? lastMessageSenderId;
+  final ChatMessageType? lastMessageType;
 
-  ChatSummary copyWith({String? lastMessage, int? unreadCount}) => ChatSummary(
+  ChatSummary copyWith({
+    String? lastMessage,
+    int? unreadCount,
+    ChatMessageStatus? lastMessageStatus,
+    int? lastMessageSenderId,
+    ChatMessageType? lastMessageType,
+  }) => ChatSummary(
     id: id,
     user: user,
     createdAt: createdAt,
     lastMessage: lastMessage ?? this.lastMessage,
     unreadCount: unreadCount ?? this.unreadCount,
+    lastMessageStatus: lastMessageStatus ?? this.lastMessageStatus,
+    lastMessageSenderId: lastMessageSenderId ?? this.lastMessageSenderId,
+    lastMessageType: lastMessageType ?? this.lastMessageType,
   );
 
   factory ChatSummary.fromJson(Map<String, dynamic> json) => ChatSummary(
@@ -50,11 +65,16 @@ class ChatSummary {
     user: ChatUser.fromJson(json['user'] as Map<String, dynamic>),
     createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
     lastMessage: json['last_message'] as String?,
-    unreadCount: json['unread_count'] as int? ?? 0,
+    unreadCount: _nonNegativeInt(json['unread_count']),
+    lastMessageStatus: _optionalMessageStatus(json['last_message_status']),
+    lastMessageSenderId: _asInt(json['last_message_sender_id']),
+    lastMessageType: _optionalMessageType(json['last_message_type']),
   );
 }
 
-enum ChatMessageStatus { sending, sent, delivered, read }
+enum ChatMessageStatus { sending, sent, delivered, read, failed }
+
+enum ChatMessageType { text, image, voice, unknown }
 
 class ChatMessage {
   const ChatMessage({
@@ -65,6 +85,9 @@ class ChatMessage {
     required this.status,
     required this.createdAt,
     this.id,
+    this.type = ChatMessageType.text,
+    this.mediaUrls = const [],
+    this.voiceData,
   });
 
   final int? id;
@@ -74,15 +97,25 @@ class ChatMessage {
   final String text;
   final ChatMessageStatus status;
   final DateTime createdAt;
+  final ChatMessageType type;
+  final List<String> mediaUrls;
+  final String? voiceData;
 
-  ChatMessage copyWith({int? id, ChatMessageStatus? status}) => ChatMessage(
+  ChatMessage copyWith({
+    int? id,
+    ChatMessageStatus? status,
+    DateTime? createdAt,
+  }) => ChatMessage(
     id: id ?? this.id,
     localId: localId,
     chatId: chatId,
     senderId: senderId,
     text: text,
     status: status ?? this.status,
-    createdAt: createdAt,
+    createdAt: createdAt ?? this.createdAt,
+    type: type,
+    mediaUrls: mediaUrls,
+    voiceData: voiceData,
   );
 
   factory ChatMessage.fromJson(Map<String, dynamic> json, {int? chatId}) {
@@ -97,6 +130,9 @@ class ChatMessage {
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
+      type: _optionalMessageType(json['message_type']) ?? ChatMessageType.text,
+      mediaUrls: _stringList(json['media_urls']),
+      voiceData: json['voice_data']?.toString(),
     );
   }
 }
@@ -107,6 +143,18 @@ int? _asInt(Object? value) => switch (value) {
   _ => null,
 };
 
+int _nonNegativeInt(Object? value) {
+  final parsed = _asInt(value) ?? 0;
+  return parsed < 0 ? 0 : parsed;
+}
+
+List<String> _stringList(Object? value) => value is List
+    ? value
+          .map((item) => item?.toString() ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false)
+    : const [];
+
 ChatMessageStatus _messageStatus(Object? value) {
   final normalized = value?.toString().toLowerCase();
   return switch (normalized) {
@@ -114,6 +162,21 @@ ChatMessageStatus _messageStatus(Object? value) {
     '1' || 'delivered' => ChatMessageStatus.delivered,
     '0' || 'sent' => ChatMessageStatus.sent,
     _ => ChatMessageStatus.sent,
+  };
+}
+
+ChatMessageStatus? _optionalMessageStatus(Object? value) {
+  if (value == null) return null;
+  return _messageStatus(value);
+}
+
+ChatMessageType? _optionalMessageType(Object? value) {
+  if (value == null) return null;
+  return switch (value.toString().trim().toLowerCase()) {
+    'text' => ChatMessageType.text,
+    'image' => ChatMessageType.image,
+    'voice' => ChatMessageType.voice,
+    _ => ChatMessageType.unknown,
   };
 }
 

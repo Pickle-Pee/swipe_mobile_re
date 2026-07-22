@@ -7,11 +7,14 @@ import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/liquid_ui.dart';
+import '../../shared/ui/midnight_components.dart';
+import '../auth/application/auth_providers.dart';
 import 'application/chat_providers.dart';
-import 'domain/chat_models.dart';
+import 'presentation/chat_components.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key, this.initialUserId});
+
   final int? initialUserId;
 
   @override
@@ -34,141 +37,237 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       final chatId = await ref
           .read(chatListControllerProvider.notifier)
           .openOrCreate(userId);
-      if (chatId != null && mounted) context.go('/chat/$chatId');
-    } else {
-      await ref.read(chatListControllerProvider.notifier).load();
+      if (chatId != null && mounted) context.go(Routes.chatFor(chatId));
+      return;
     }
+    final state = ref.read(chatListControllerProvider);
+    if (state.status == ChatListStatus.initial) await _reload();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(chatListControllerProvider);
-    return Scaffold(
-      body: AppGradientScaffold(
-        child: Column(
-          children: [
-            Padding(
-              padding: AppTokens.screenPadding,
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go(Routes.discover),
-                    icon: const Icon(Icons.chevron_left_rounded),
-                  ),
-                  Text(
-                    'All Chats',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(child: _content(state)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _content(ChatListState state) {
-    if ((state.status == ChatListStatus.loading || state.isCreating) &&
-        state.chats.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (state.status == ChatListStatus.error && state.chats.isEmpty) {
-      return _ChatMessage(
-        message: _errorMessage(state.error),
-        onRetry: _reload,
-      );
-    }
-    if (state.chats.isEmpty) {
-      return _ChatMessage(message: 'No conversations yet', onRetry: _reload);
-    }
-    return RefreshIndicator(
-      onRefresh: _reload,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: state.chats.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (_, index) => _ChatTile(chat: state.chats[index]),
-      ),
+    final currentUserId = ref.watch(authControllerProvider).user?.id;
+    return ChatListView(
+      state: state,
+      currentUserId: currentUserId,
+      onRetry: _reload,
+      onDiscover: () => context.go(Routes.discover),
+      onOpenChat: (chatId) => context.push(Routes.chatFor(chatId)),
+      imageProviderBuilder: _chatImageProvider,
     );
   }
 
   Future<void> _reload() =>
       ref.read(chatListControllerProvider.notifier).load();
+}
+
+class ChatListView extends StatelessWidget {
+  const ChatListView({
+    super.key,
+    required this.state,
+    required this.currentUserId,
+    required this.onRetry,
+    required this.onDiscover,
+    required this.onOpenChat,
+    this.imageProviderBuilder,
+  });
+
+  final ChatListState state;
+  final int? currentUserId;
+  final Future<void> Function() onRetry;
+  final VoidCallback onDiscover;
+  final ValueChanged<int> onOpenChat;
+  final ChatImageProviderBuilder? imageProviderBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final unreadCount = state.chats.fold<int>(
+      0,
+      (total, chat) => total + chat.unreadCount,
+    );
+    return Scaffold(
+      backgroundColor: AppTokens.backgroundBase,
+      body: AppGradientScaffold(
+        safeArea: false,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTokens.space12,
+                  AppTokens.space8,
+                  AppTokens.space12,
+                  AppTokens.space8,
+                ),
+                child: ChatsTopBar(
+                  key: const Key('chats-top-bar'),
+                  unreadCount: unreadCount,
+                ),
+              ),
+              Expanded(child: _content(context)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context) {
+    if (state.status == ChatListStatus.loading && state.chats.isEmpty) {
+      return const ChatListSkeleton();
+    }
+    if (state.status == ChatListStatus.error && state.chats.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space20,
+            AppTokens.space20,
+            AppTokens.space20,
+            AppTokens.floatingNavigationClearance,
+          ),
+          child: ErrorState(
+            key: const Key('chat-list-error'),
+            title: 'Chats are unavailable',
+            message: _errorMessage(state.error),
+            actionLabel: 'Try again',
+            onAction: onRetry,
+          ),
+        ),
+      );
+    }
+    if (state.chats.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space20,
+            AppTokens.space20,
+            AppTokens.space20,
+            AppTokens.floatingNavigationClearance,
+          ),
+          child: EmptyState(
+            key: const Key('chat-list-empty'),
+            icon: Icons.chat_bubble_outline_rounded,
+            title: 'No conversations yet',
+            message:
+                'Your conversations will appear here after a mutual match.',
+            actionLabel: 'Explore profiles',
+            onAction: onDiscover,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        AnimatedSwitcher(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : AppTokens.motionContent,
+          child: state.error == null
+              ? const SizedBox.shrink(key: Key('chat-list-no-inline-error'))
+              : _InlineListError(
+                  key: const Key('chat-list-inline-error'),
+                  message: _errorMessage(state.error),
+                  onRetry: onRetry,
+                ),
+        ),
+        if (state.status == ChatListStatus.loading)
+          const LinearProgressIndicator(
+            key: Key('chat-list-refresh-progress'),
+            minHeight: 2,
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRetry,
+            child: ListView.builder(
+              key: const PageStorageKey<String>('chat-list'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.space16,
+                AppTokens.space4,
+                AppTokens.space16,
+                AppTokens.floatingNavigationClearance,
+              ),
+              itemCount: state.chats.length,
+              itemBuilder: (context, index) {
+                final chat = state.chats[index];
+                return ChatListTile(
+                  key: ValueKey('chat-${chat.id}'),
+                  chat: chat,
+                  currentUserId: currentUserId,
+                  imageProviderBuilder: imageProviderBuilder,
+                  onTap: () => onOpenChat(chat.id),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   String _errorMessage(Object? error) => error is ApiException
       ? error.message
-      : 'Could not load chats. Please try again.';
+      : 'Check your connection and try again.';
 }
 
-class _ChatTile extends StatelessWidget {
-  const _ChatTile({required this.chat});
-  final ChatSummary chat;
+class _InlineListError extends StatelessWidget {
+  const _InlineListError({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
 
-  @override
-  Widget build(BuildContext context) => GlassSurface(
-    padding: const EdgeInsets.all(12),
-    child: ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: AppTokens.surfaceStrong,
-        backgroundImage: chat.user.avatarUrl == null
-            ? null
-            : NetworkImage(_mediaUrl(chat.user.avatarUrl!)),
-        child: chat.user.avatarUrl == null ? const Icon(Icons.person) : null,
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              chat.user.firstName,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-          if (chat.createdAt != null)
-            Text(
-              TimeOfDay.fromDateTime(chat.createdAt!.toLocal()).format(context),
-              style: const TextStyle(fontSize: 12),
-            ),
-        ],
-      ),
-      subtitle: Text(
-        chat.lastMessage ?? 'No messages yet',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: chat.unreadCount > 0
-          ? Badge(label: Text('${chat.unreadCount}'))
-          : chat.user.status == null
-          ? null
-          : PillTag(label: chat.user.status!),
-      onTap: () => context.go('/chat/${chat.id}'),
-    ),
-  );
-}
-
-class _ChatMessage extends StatelessWidget {
-  const _ChatMessage({required this.message, required this.onRetry});
   final String message;
-  final Future<void> Function() onRetry;
+  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(message),
-        const SizedBox(height: 10),
-        TextButton(onPressed: onRetry, child: const Text('Reload')),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: AppTokens.space16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space12,
+          vertical: AppTokens.space8,
+        ),
+        decoration: BoxDecoration(
+          color: AppTokens.error.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          border: Border.all(color: AppTokens.error.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: AppTokens.iconCompact,
+              color: AppTokens.error,
+            ),
+            const SizedBox(width: AppTokens.space8),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-String _mediaUrl(String value) {
-  final uri = Uri.parse(value);
-  return uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(value).toString();
+ImageProvider<Object>? _chatImageProvider(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parsed = Uri.tryParse(value);
+  if (parsed == null) return null;
+  final url = parsed.hasScheme
+      ? parsed.toString()
+      : Uri.parse(AppConfig.baseAppUrl).resolveUri(parsed).toString();
+  return NetworkImage(url);
 }

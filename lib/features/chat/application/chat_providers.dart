@@ -38,16 +38,27 @@ class ChatListController extends Notifier<ChatListState> {
   ChatListState build() => const ChatListState();
 
   Future<void> load() async {
-    state = ChatListState(status: ChatListStatus.loading, chats: state.chats);
+    state = ChatListState(
+      status: ChatListStatus.loading,
+      chats: state.chats,
+      isCreating: state.isCreating,
+    );
     try {
-      final chats = await _repository.getChats();
+      final loaded = await _repository.getChats();
+      final seen = <int>{};
+      final chats = [
+        for (final chat in loaded)
+          if (seen.add(chat.id)) chat,
+      ];
       state = ChatListState(
         status: chats.isEmpty ? ChatListStatus.empty : ChatListStatus.data,
         chats: chats,
       );
     } on Object catch (error) {
       state = ChatListState(
-        status: ChatListStatus.error,
+        status: state.chats.isEmpty
+            ? ChatListStatus.error
+            : ChatListStatus.data,
         chats: state.chats,
         error: error,
       );
@@ -68,7 +79,9 @@ class ChatListController extends Notifier<ChatListState> {
       return chatId;
     } on Object catch (error) {
       state = ChatListState(
-        status: ChatListStatus.error,
+        status: state.chats.isEmpty
+            ? ChatListStatus.error
+            : ChatListStatus.data,
         chats: state.chats,
         error: error,
       );

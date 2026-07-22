@@ -14,4 +14,5 @@ class Routes {
 
   static String publicProfileFor(int userId) => '/discover/profile/$userId';
   static String matchFor(int userId) => '/match/$userId';
+  static String chatFor(int chatId) => '/chat/$chatId';
 }

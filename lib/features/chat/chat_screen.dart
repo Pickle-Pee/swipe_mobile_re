@@ -201,6 +201,7 @@ String _statusLabel(ChatMessageStatus status) => switch (status) {
   ChatMessageStatus.sent => 'Sent',
   ChatMessageStatus.delivered => 'Delivered',
   ChatMessageStatus.read => 'Read',
+  ChatMessageStatus.failed => 'Failed',
 };
 
 String _mediaUrl(String value) {
