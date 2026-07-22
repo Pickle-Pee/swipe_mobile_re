@@ -9,11 +9,13 @@ class ProfileMediaCard extends StatelessWidget {
     required this.semanticLabel,
     required this.overlay,
     this.imageProvider,
+    this.heroTag,
   });
 
   final String semanticLabel;
   final ImageProvider<Object>? imageProvider;
   final Widget overlay;
+  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
@@ -22,25 +24,28 @@ class ProfileMediaCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          RepaintBoundary(
+          _OptionalHero(
+            tag: heroTag,
             child: imageProvider == null
-                ? const _MissingProfileMedia()
-                : Image(
-                    image: imageProvider!,
-                    fit: BoxFit.cover,
-                    semanticLabel: semanticLabel,
-                    frameBuilder:
-                        (context, child, frame, wasSynchronouslyLoaded) {
-                          if (wasSynchronouslyLoaded || frame != null) {
-                            return child;
-                          }
-                          return const SkeletonLoader(
-                            radius: AppTokens.radiusXLarge,
-                          );
-                        },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const _MissingProfileMedia();
-                    },
+                ? const ProfileMediaPlaceholder()
+                : RepaintBoundary(
+                    child: Image(
+                      image: imageProvider!,
+                      fit: BoxFit.cover,
+                      semanticLabel: semanticLabel,
+                      frameBuilder:
+                          (context, child, frame, wasSynchronouslyLoaded) {
+                            if (wasSynchronouslyLoaded || frame != null) {
+                              return child;
+                            }
+                            return const SkeletonLoader(
+                              radius: AppTokens.radiusXLarge,
+                            );
+                          },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const ProfileMediaPlaceholder();
+                      },
+                    ),
                   ),
           ),
           overlay,
@@ -50,15 +55,30 @@ class ProfileMediaCard extends StatelessWidget {
   }
 }
 
-class _MissingProfileMedia extends StatelessWidget {
-  const _MissingProfileMedia();
+class _OptionalHero extends StatelessWidget {
+  const _OptionalHero({required this.tag, required this.child});
+
+  final Object? tag;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = tag;
+    return value == null ? child : Hero(tag: value, child: child);
+  }
+}
+
+class ProfileMediaPlaceholder extends StatelessWidget {
+  const ProfileMediaPlaceholder({super.key, this.semanticLabel});
+
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       key: const Key('profile-media-missing'),
       image: true,
-      label: 'Profile photo unavailable',
+      label: semanticLabel ?? 'Profile photo unavailable',
       child: const DecoratedBox(
         decoration: BoxDecoration(gradient: AppTokens.missingMediaGradient),
         child: Center(

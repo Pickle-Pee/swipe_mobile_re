@@ -12,6 +12,7 @@ import '../../shared/theme/tokens.dart';
 import '../../shared/ui/discovery_components.dart';
 import '../../shared/ui/liquid_ui.dart';
 import '../../shared/ui/midnight_components.dart';
+import '../../shared/ui/profile_components.dart';
 import 'application/discovery_providers.dart';
 import 'domain/discovery_models.dart';
 
@@ -54,7 +55,9 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
       onOpenLikes: () => context.go(Routes.likes),
       onOpenChats: () => context.go(Routes.chats),
       onOpenProfile: (profile) {
-        unawaited(_showProfileDetails(profile));
+        unawaited(
+          context.push(Routes.publicProfileFor(profile.id), extra: profile),
+        );
       },
     );
   }
@@ -79,19 +82,6 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
     } else {
       unawaited(controller.load());
     }
-  }
-
-  Future<void> _showProfileDetails(DiscoveryProfile profile) {
-    return showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      barrierColor: Colors.black.withValues(alpha: 0.62),
-      builder: (context) => FractionallySizedBox(
-        heightFactor: 0.78,
-        child: _ProfileDetailsSheet(profile: profile),
-      ),
-    );
   }
 
   Future<void> _showMatch(DiscoveryProfile profile) async {
@@ -266,6 +256,7 @@ class DiscoveryView extends StatelessWidget {
         : null;
     return ProfileMediaCard(
       key: ValueKey('discovery-profile-${profile.id}'),
+      heroTag: profileMediaHeroTag(profile.id),
       semanticLabel: profile.firstName.trim().isEmpty
           ? 'Profile photo'
           : 'Profile photo of ${profile.firstName.trim()}',
@@ -389,166 +380,6 @@ class _InlineDiscoveryError extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ProfileDetailsSheet extends StatelessWidget {
-  const _ProfileDetailsSheet({required this.profile});
-
-  final DiscoveryProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final interests = profile.interests
-        .map((interest) => interest.label.trim())
-        .where((label) => label.isNotEmpty)
-        .toList(growable: false);
-    final hasDetails =
-        profile.aboutMe.trim().isNotEmpty ||
-        profile.city.trim().isNotEmpty ||
-        interests.isNotEmpty ||
-        profile.attributes.isNotEmpty;
-
-    return GlassSheet(
-      child: Column(
-        children: [
-          Container(
-            width: 42,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTokens.glassHighlight,
-              borderRadius: BorderRadius.circular(AppTokens.radiusPill),
-            ),
-          ),
-          const SizedBox(height: AppTokens.space12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _identity(profile),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-              ),
-              const SizedBox(width: AppTokens.space12),
-              GlassIconButton(
-                icon: Icons.close_rounded,
-                semanticLabel: 'Close profile details',
-                tooltip: 'Close',
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space16),
-          Expanded(
-            child: SingleChildScrollView(
-              child: hasDetails
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (profile.city.trim().isNotEmpty)
-                          _SheetSection(
-                            title: 'Location',
-                            child: Text(profile.city.trim()),
-                          ),
-                        if (profile.aboutMe.trim().isNotEmpty)
-                          _SheetSection(
-                            title: 'About',
-                            child: Text(profile.aboutMe.trim()),
-                          ),
-                        if (interests.isNotEmpty)
-                          _SheetSection(
-                            title: 'Interests',
-                            child: Wrap(
-                              spacing: AppTokens.space8,
-                              runSpacing: AppTokens.space8,
-                              children: interests
-                                  .map((label) => InterestChip(label: label))
-                                  .toList(growable: false),
-                            ),
-                          ),
-                        if (profile.attributes.isNotEmpty)
-                          _SheetSection(
-                            title: 'Details',
-                            child: Column(
-                              children: profile.attributes.entries
-                                  .map(
-                                    (entry) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: AppTokens.space12,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              entry.key,
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.bodyMedium,
-                                            ),
-                                          ),
-                                          const SizedBox(
-                                            width: AppTokens.space16,
-                                          ),
-                                          Flexible(
-                                            child: Text(
-                                              entry.value,
-                                              textAlign: TextAlign.end,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.copyWith(
-                                                    color:
-                                                        AppTokens.textPrimary,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                            ),
-                          ),
-                      ],
-                    )
-                  : Text(
-                      'No additional profile details are available yet.',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SheetSection extends StatelessWidget {
-  const _SheetSection({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTokens.space24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppTokens.space8),
-          DefaultTextStyle.merge(
-            style: Theme.of(context).textTheme.bodyLarge,
-            child: child,
-          ),
-        ],
       ),
     );
   }
