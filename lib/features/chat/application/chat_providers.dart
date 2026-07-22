@@ -581,6 +581,9 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       isLoadingOlder: isLoadingOlder,
       hasMore: hasMore,
       nextCursor: nextCursor,
+      isSending: messages.any(
+        (message) => message.status == ChatMessageStatus.sending,
+      ),
       error: clearError ? null : _stateUnset,
       loadOlderError: clearOlderError ? null : _stateUnset,
     );
