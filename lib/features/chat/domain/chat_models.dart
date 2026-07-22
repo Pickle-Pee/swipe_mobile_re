@@ -99,7 +99,7 @@ class ChatMessage {
   final DateTime createdAt;
   final ChatMessageType type;
   final List<String> mediaUrls;
-  final String? voiceData;
+  final List<int>? voiceData;
 
   ChatMessage copyWith({
     int? id,
@@ -132,7 +132,44 @@ class ChatMessage {
           DateTime.now(),
       type: _optionalMessageType(json['message_type']) ?? ChatMessageType.text,
       mediaUrls: _stringList(json['media_urls']),
-      voiceData: json['voice_data']?.toString(),
+      voiceData: _intList(json['voice_data']),
+    );
+  }
+}
+
+class ChatMessagePage {
+  const ChatMessagePage({
+    required this.items,
+    required this.nextCursor,
+    required this.hasMore,
+  });
+
+  final List<ChatMessage> items;
+  final String? nextCursor;
+  final bool hasMore;
+
+  factory ChatMessagePage.fromJson(Map<String, dynamic> json, {int? chatId}) {
+    final rawItems = json['items'];
+    final items = rawItems is List
+        ? rawItems
+              .whereType<Map>()
+              .map(
+                (item) => ChatMessage.fromJson(
+                  item.map((key, value) => MapEntry(key.toString(), value)),
+                  chatId: chatId,
+                ),
+              )
+              .toList(growable: false)
+        : const <ChatMessage>[];
+    final hasMore = json['has_more'] == true;
+    final nextCursor = json['next_cursor'] as String?;
+    if (hasMore && (nextCursor == null || nextCursor.isEmpty)) {
+      throw const FormatException('Paginated chat response has no cursor');
+    }
+    return ChatMessagePage(
+      items: items,
+      nextCursor: nextCursor,
+      hasMore: hasMore,
     );
   }
 }
@@ -154,6 +191,16 @@ List<String> _stringList(Object? value) => value is List
           .where((item) => item.isNotEmpty)
           .toList(growable: false)
     : const [];
+
+List<int>? _intList(Object? value) {
+  if (value == null) return null;
+  if (value is! List) return null;
+  final values = value
+      .map((item) => _asInt(item))
+      .whereType<int>()
+      .toList(growable: false);
+  return values.length == value.length ? values : null;
+}
 
 ChatMessageStatus _messageStatus(Object? value) {
   final normalized = value?.toString().toLowerCase();

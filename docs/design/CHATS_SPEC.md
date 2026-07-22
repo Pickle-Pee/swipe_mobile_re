@@ -14,10 +14,11 @@ GET  /communication/get_chats
 GET  /communication/{chat_id}
 GET  /communication/get_chat_id_by_user_id?recipient_id={user_id}
 POST /communication/create_chat { "user_id": user_id }
+GET  /communication/{chat_id}/messages?limit=30&before={cursor}
 
 Socket.IO:
 authenticate -> auth_response
-get_messages -> get_messages
+join_chat -> chat_joined
 send_message -> completer
 new_message
 message_delivered
@@ -28,9 +29,8 @@ error
 ```
 
 The application keeps one authenticated socket manager for the app lifetime.
-A conversation subscribes to that manager once and cancels only its stream
-subscription on dispose. The backend has no explicit join/leave-room event;
-the active conversation is client UI state, not a new protocol concept.
+A conversation subscribes to that manager once, joins its room without loading
+history, and leaves it on dispose.
 
 ## Contract reality
 
@@ -46,10 +46,9 @@ There is no `last_message_at`. The UI may format the real available timestamp,
 but must not label it as a fabricated last-message time. A future backend
 contract can replace it without changing the visual component.
 
-`get_messages` returns the complete ordered history and has no cursor, offset,
-or end marker. DES-03 therefore does not show a fake bottom loader or claim
-pagination. The list remains lazy, keyed, and scroll-position aware; true
-history pagination requires a separate backend-contract task.
+The canonical REST history endpoint returns bounded cursor pages ordered oldest
+to newest. The initial page contains at most 30 newest messages. Older pages use
+the opaque `next_cursor` as `before`; Socket.IO never returns history.
 
 The backend payload can describe text, image, and voice records. The active
 Riverpod send path is complete only for text. Image/voice upload methods and a
@@ -176,9 +175,10 @@ shows a compact banner when the state is not connected and uses user-facing
 copy without protocol details.
 
 Listeners are bound once in the manager constructor and removed on manager
-dispose. Reconnect reauthenticates the same transport, requests active history
-again, and merges rather than appends duplicates. Pending commands remain
-in-memory only for the current process. Logout clears them and disconnects.
+dispose. Reconnect reauthenticates the same transport, rejoins the active room,
+loads only the newest REST page, and merges rather than appends duplicates.
+Pending commands remain in-memory only for the current process. Logout clears
+them and disconnects.
 
 ## Unread rules
 
@@ -235,8 +235,8 @@ up to 220 ms, and no list-wide, bouncing, or infinite animation is introduced.
 - Stable message keys and `RepaintBoundary` around media/fallback regions.
 - One persistent scroll controller and one conversation stream subscription.
 - State changes merge only affected records; no full-screen ticker exists.
-- The current API has no pagination, so history remains an acknowledged memory
-  risk for very long chats until a backend cursor contract is introduced.
+- Cursor pages cap each history request and the lazy list retains only pages the
+  user has explicitly reached.
 
 ## Test scenarios
 
