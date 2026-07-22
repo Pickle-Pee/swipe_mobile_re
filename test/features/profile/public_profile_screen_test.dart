@@ -100,6 +100,23 @@ void main() {
     expect(likes, 1);
   });
 
+  testWidgets('Likes-origin profile exposes Like back without Pass', (
+    tester,
+  ) async {
+    var likes = 0;
+    await _pump(
+      tester,
+      _data(_profile),
+      showActions: true,
+      showPassAction: false,
+      onLike: () => likes++,
+    );
+
+    expect(find.byKey(const Key('public-profile-pass')), findsNothing);
+    await tester.tap(find.byKey(const Key('public-profile-like')));
+    expect(likes, 1);
+  });
+
   testWidgets('reaction loading is action-specific and blocks both actions', (
     tester,
   ) async {
@@ -162,6 +179,7 @@ Future<void> _pump(
   Size size = const Size(390, 844),
   double textScale = 1,
   bool showActions = false,
+  bool showPassAction = true,
   bool passLoading = false,
   bool likeLoading = false,
   Object? reactionError,
@@ -191,6 +209,7 @@ Future<void> _pump(
           onRetry: () {},
           enableHero: false,
           showActions: showActions,
+          showPassAction: showPassAction,
           passLoading: passLoading,
           likeLoading: likeLoading,
           reactionError: reactionError,
