@@ -191,9 +191,17 @@ class ActiveChatRegistry {
 }
 
 final chatRealtimeProvider = Provider<void>((ref) {
+  var hasAuthenticated = ref.watch(chatSocketManagerProvider).isAuthenticated;
   final subscription = ref.watch(chatSocketManagerProvider).events.listen((
     event,
   ) {
+    if (event.name == ChatSocketManager.authenticated) {
+      if (hasAuthenticated) {
+        unawaited(ref.read(chatListControllerProvider.notifier).load());
+      }
+      hasAuthenticated = true;
+      return;
+    }
     if (event.name != ChatSocketManager.incoming) return;
     final message = ChatMessage.fromJson(event.data);
     final isOpen =
@@ -207,18 +215,55 @@ final chatRealtimeProvider = Provider<void>((ref) {
   ref.onDispose(subscription.cancel);
 });
 
+const _stateUnset = Object();
+
 class ChatMessagesState {
   const ChatMessagesState({
     this.messages = const [],
-    this.isLoading = true,
+    bool initialLoading = true,
+    bool? isLoading,
+    this.isLoadingOlder = false,
+    this.loadOlderError,
+    this.hasMore = false,
+    this.nextCursor,
     this.isSending = false,
     this.error,
-  });
+  }) : initialLoading = isLoading ?? initialLoading;
 
   final List<ChatMessage> messages;
-  final bool isLoading;
+  final bool initialLoading;
+  final bool isLoadingOlder;
+  final Object? loadOlderError;
+  final bool hasMore;
+  final String? nextCursor;
   final bool isSending;
   final Object? error;
+
+  bool get isLoading => initialLoading;
+
+  ChatMessagesState copyWith({
+    List<ChatMessage>? messages,
+    bool? initialLoading,
+    bool? isLoadingOlder,
+    Object? loadOlderError = _stateUnset,
+    bool? hasMore,
+    Object? nextCursor = _stateUnset,
+    bool? isSending,
+    Object? error = _stateUnset,
+  }) => ChatMessagesState(
+    messages: messages ?? this.messages,
+    initialLoading: initialLoading ?? this.initialLoading,
+    isLoadingOlder: isLoadingOlder ?? this.isLoadingOlder,
+    loadOlderError: identical(loadOlderError, _stateUnset)
+        ? this.loadOlderError
+        : loadOlderError,
+    hasMore: hasMore ?? this.hasMore,
+    nextCursor: identical(nextCursor, _stateUnset)
+        ? this.nextCursor
+        : nextCursor as String?,
+    isSending: isSending ?? this.isSending,
+    error: identical(error, _stateUnset) ? this.error : error,
+  );
 }
 
 final chatMessagesControllerProvider = NotifierProvider.autoDispose
@@ -228,19 +273,127 @@ final chatMessagesControllerProvider = NotifierProvider.autoDispose
 
 class ChatMessagesController extends Notifier<ChatMessagesState> {
   ChatMessagesController(this.chatId);
+
+  static const _pageLimit = 30;
+
   final int chatId;
   StreamSubscription<ChatSocketEvent>? _subscription;
   bool _awaitingInitialAuthentication = false;
+  bool _initialLoadInFlight = false;
+  bool _latestSyncInFlight = false;
+  bool _disposed = false;
 
   ChatSocketManager get _socket => ref.read(chatSocketManagerProvider);
+  ChatRepository get _repository => ref.read(chatRepositoryProvider);
 
   @override
   ChatMessagesState build() {
-    _subscription = _socket.events.listen(_onEvent);
-    ref.onDispose(() => _subscription?.cancel());
-    _awaitingInitialAuthentication = !_socket.isAuthenticated;
-    _socket.requestHistory(chatId);
+    final socket = _socket;
+    _subscription = socket.events.listen(_onEvent);
+    _awaitingInitialAuthentication = !socket.isAuthenticated;
+    socket.joinChat(chatId);
+    ref.onDispose(() {
+      _disposed = true;
+      final subscription = _subscription;
+      if (subscription != null) unawaited(subscription.cancel());
+      socket.leaveChat(chatId);
+    });
+    scheduleMicrotask(() => unawaited(loadInitial()));
     return const ChatMessagesState();
+  }
+
+  Future<void> loadInitial() async {
+    if (_initialLoadInFlight || _disposed) return;
+    _initialLoadInFlight = true;
+    state = state.copyWith(
+      initialLoading: true,
+      error: null,
+      loadOlderError: null,
+    );
+    try {
+      final page = await _repository.getMessages(chatId, limit: _pageLimit);
+      if (_disposed) return;
+      _merge(
+        page.items,
+        initialLoading: false,
+        hasMore: page.hasMore,
+        nextCursor: page.nextCursor,
+        clearError: true,
+        clearOlderError: true,
+      );
+      _markIncomingRead(page.items);
+      ref.read(chatListControllerProvider.notifier).markChatOpen(chatId);
+    } on Object {
+      if (_disposed) return;
+      state = state.copyWith(
+        initialLoading: false,
+        error: const ChatHistoryFailure(),
+      );
+    } finally {
+      _initialLoadInFlight = false;
+    }
+  }
+
+  Future<void> loadOlder() async {
+    final cursor = state.nextCursor;
+    if (_disposed ||
+        state.initialLoading ||
+        state.isLoadingOlder ||
+        !state.hasMore ||
+        cursor == null) {
+      return;
+    }
+
+    state = state.copyWith(isLoadingOlder: true, loadOlderError: null);
+    try {
+      final page = await _repository.getMessages(
+        chatId,
+        before: cursor,
+        limit: _pageLimit,
+      );
+      if (_disposed) return;
+      _merge(
+        page.items,
+        isLoadingOlder: false,
+        hasMore: page.hasMore,
+        nextCursor: page.nextCursor,
+        clearOlderError: true,
+      );
+      _markIncomingRead(page.items);
+    } on Object {
+      if (_disposed) return;
+      state = state.copyWith(
+        isLoadingOlder: false,
+        loadOlderError: const ChatOlderHistoryFailure(),
+      );
+    }
+  }
+
+  Future<void> _syncLatest() async {
+    if (_disposed || _initialLoadInFlight || _latestSyncInFlight) return;
+    _latestSyncInFlight = true;
+    try {
+      final page = await _repository.getMessages(chatId, limit: _pageLimit);
+      if (_disposed) return;
+      final initializePagination = state.messages.isEmpty;
+      _merge(
+        page.items,
+        initialLoading: false,
+        hasMore: initializePagination ? page.hasMore : null,
+        nextCursor: initializePagination ? page.nextCursor : _stateUnset,
+        clearError: initializePagination,
+      );
+      _markIncomingRead(page.items);
+      ref.read(chatListControllerProvider.notifier).markChatOpen(chatId);
+    } on Object {
+      if (_disposed || state.messages.isNotEmpty) return;
+      state = state.copyWith(
+        initialLoading: false,
+        error: const ChatHistoryFailure(),
+      );
+    } finally {
+      _latestSyncInFlight = false;
+    }
   }
 
   Future<bool> send(String rawText) async {
@@ -261,10 +414,11 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       status: ChatMessageStatus.sending,
       createdAt: DateTime.now(),
     );
-    state = ChatMessagesState(
+    state = state.copyWith(
       messages: [...state.messages, optimistic],
-      isLoading: false,
+      initialLoading: false,
       isSending: true,
+      error: null,
     );
     _socket.sendMessage(chatId: chatId, text: text, externalId: externalId);
     return true;
@@ -296,14 +450,9 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
     return true;
   }
 
-  void retryHistory() {
-    state = ChatMessagesState(
-      messages: state.messages,
-      isLoading: true,
-      isSending: state.isSending,
-    );
-    _socket.requestHistory(chatId);
-  }
+  void retryHistory() => unawaited(loadInitial());
+
+  void retryOlder() => unawaited(loadOlder());
 
   void _onEvent(ChatSocketEvent event) {
     if (event.name == ChatSocketManager.authenticated) {
@@ -311,50 +460,15 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
         _awaitingInitialAuthentication = false;
         return;
       }
-      _socket.requestHistory(chatId);
-      return;
-    }
-    if (event.name == ChatSocketManager.history) {
-      if (_int(event.data['chatId']) != chatId) return;
-      final raw = event.data['messages'];
-      final history = raw is List
-          ? raw
-                .whereType<Map>()
-                .map(
-                  (item) => ChatMessage.fromJson(
-                    item.map((key, value) => MapEntry(key.toString(), value)),
-                    chatId: chatId,
-                  ),
-                )
-                .toList()
-          : <ChatMessage>[];
-      _merge(history, isLoading: false, clearError: true);
-      final userId = ref.read(authControllerProvider).user?.id;
-      final unreadIds = history
-          .where(
-            (message) =>
-                message.id != null &&
-                message.senderId != userId &&
-                message.status != ChatMessageStatus.read,
-          )
-          .map((message) => message.id!)
-          .toList(growable: false);
-      if (unreadIds.isNotEmpty) {
-        _socket.markDelivered(unreadIds);
-        _socket.markRead(unreadIds);
-      }
-      ref.read(chatListControllerProvider.notifier).markChatOpen(chatId);
+      _socket.joinChat(chatId);
+      unawaited(_syncLatest());
       return;
     }
     if (event.name == ChatSocketManager.incoming) {
       if (_int(event.data['chat_id']) != chatId) return;
       final message = ChatMessage.fromJson(event.data, chatId: chatId);
-      _merge([message], isLoading: false);
-      final userId = ref.read(authControllerProvider).user?.id;
-      if (message.id != null && message.senderId != userId) {
-        _socket.markDelivered([message.id!]);
-        _socket.markRead([message.id!]);
-      }
+      _merge([message], initialLoading: false);
+      _markIncomingRead([message]);
       return;
     }
     if (event.name == ChatSocketManager.completed) {
@@ -362,7 +476,7 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       final localId = event.data['external_message_id']?.toString();
       if (localId == null) return;
       final current = state.messages
-          .where((m) => m.localId == localId)
+          .where((message) => message.localId == localId)
           .firstOrNull;
       if (current == null) return;
       final acknowledged = current.copyWith(
@@ -394,7 +508,7 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
     if (event.name == ChatSocketManager.allRead) {
       if (_int(event.data['chat_id']) != chatId) return;
       final userId = ref.read(authControllerProvider).user?.id;
-      state = ChatMessagesState(
+      state = state.copyWith(
         messages: [
           for (final message in state.messages)
             if (message.senderId == userId)
@@ -402,9 +516,6 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
             else
               message,
         ],
-        isLoading: state.isLoading,
-        isSending: state.isSending,
-        error: state.error,
       );
       return;
     }
@@ -414,7 +525,8 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       final hasPending = state.messages.any(
         (message) => message.status == ChatMessageStatus.sending,
       );
-      state = ChatMessagesState(
+      if (!hasPending) return;
+      state = state.copyWith(
         messages: [
           for (final message in state.messages)
             if (message.status == ChatMessageStatus.sending)
@@ -422,19 +534,36 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
             else
               message,
         ],
-        isLoading: false,
         isSending: false,
-        error: hasPending
-            ? const ChatSendFailure()
-            : const ChatHistoryFailure(),
+        error: const ChatSendFailure(),
       );
     }
   }
 
+  void _markIncomingRead(Iterable<ChatMessage> messages) {
+    final userId = ref.read(authControllerProvider).user?.id;
+    final unreadIds = messages
+        .where(
+          (message) =>
+              message.id != null &&
+              message.senderId != userId &&
+              message.status != ChatMessageStatus.read,
+        )
+        .map((message) => message.id!)
+        .toList(growable: false);
+    if (unreadIds.isEmpty) return;
+    _socket.markDelivered(unreadIds);
+    _socket.markRead(unreadIds);
+  }
+
   void _merge(
     List<ChatMessage> additions, {
-    bool? isLoading,
+    bool? initialLoading,
+    bool? isLoadingOlder,
+    bool? hasMore,
+    Object? nextCursor = _stateUnset,
     bool clearError = false,
+    bool clearOlderError = false,
   }) {
     final messages = [...state.messages];
     for (final addition in additions) {
@@ -450,11 +579,14 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
       }
     }
     messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    state = ChatMessagesState(
+    state = state.copyWith(
       messages: messages,
-      isLoading: isLoading ?? state.isLoading,
-      isSending: state.isSending,
-      error: clearError ? null : state.error,
+      initialLoading: initialLoading,
+      isLoadingOlder: isLoadingOlder,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
+      error: clearError ? null : _stateUnset,
+      loadOlderError: clearOlderError ? null : _stateUnset,
     );
   }
 
@@ -464,14 +596,13 @@ class ChatMessagesController extends Notifier<ChatMessagesState> {
     bool? isSending,
     bool clearError = false,
   }) {
-    state = ChatMessagesState(
+    state = state.copyWith(
       messages: [
         for (final message in state.messages)
           if (message.localId == localId) replacement else message,
       ],
-      isLoading: state.isLoading,
-      isSending: isSending ?? state.isSending,
-      error: clearError ? null : state.error,
+      isSending: isSending,
+      error: clearError ? null : _stateUnset,
     );
   }
 }
@@ -482,6 +613,10 @@ class ChatSendFailure implements Exception {
 
 class ChatHistoryFailure implements Exception {
   const ChatHistoryFailure();
+}
+
+class ChatOlderHistoryFailure implements Exception {
+  const ChatOlderHistoryFailure();
 }
 
 int? _int(Object? value) => switch (value) {

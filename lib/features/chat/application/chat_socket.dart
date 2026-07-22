@@ -69,7 +69,8 @@ class ChatSocketManager {
   }
 
   static const authenticated = 'authenticated';
-  static const history = 'get_messages';
+  static const join = 'join_chat';
+  static const leave = 'leave_chat';
   static const incoming = 'new_message';
   static const completed = 'completer';
   static const statusUpdate = 'message_status_update';
@@ -110,8 +111,19 @@ class ChatSocketManager {
     }
   }
 
-  void requestHistory(int chatId) =>
-      _emitAuthenticated(history, {'chat_id': chatId});
+  void joinChat(int chatId) => _emitAuthenticated(join, {'chat_id': chatId});
+
+  void leaveChat(int chatId) {
+    _pending.removeWhere(
+      (command) =>
+          command.key == join &&
+          command.value is Map &&
+          (command.value as Map)['chat_id'] == chatId,
+    );
+    if (_isAuthenticated) {
+      _transport.emit(leave, {'chat_id': chatId});
+    }
+  }
 
   void sendMessage({
     required int chatId,
@@ -179,7 +191,7 @@ class ChatSocketManager {
       }
       _pending.clear();
     });
-    for (final event in [history, incoming, completed, statusUpdate, allRead]) {
+    for (final event in [incoming, completed, statusUpdate, allRead]) {
       _transport.on(event, (data) {
         _events.add(ChatSocketEvent(event, _map(data)));
       });
@@ -239,7 +251,6 @@ class ChatSocketManager {
       'connect',
       'disconnect',
       'auth_response',
-      history,
       incoming,
       completed,
       statusUpdate,
