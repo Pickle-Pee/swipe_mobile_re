@@ -118,7 +118,9 @@ class DioProfileRepository implements ProfileRepository {
         );
         completed.add(ProfileSaveStage.attributes);
       }
-      return await getCurrentProfile();
+      final canonical = await getCurrentProfile();
+      _verifySaved(request, canonical);
+      return canonical;
     } on Object catch (error) {
       if (completed.isEmpty) rethrow;
       UserProfile? canonical;
@@ -174,6 +176,55 @@ class DioProfileRepository implements ProfileRepository {
     return getCurrentProfile();
   }
 
+  void _verifySaved(ProfileSaveRequest request, UserProfile canonical) {
+    final mismatches = <String>[];
+    final update = request.profile;
+    if (update.firstName != null && update.firstName != canonical.firstName) {
+      mismatches.add('first_name');
+    }
+    if (update.dateOfBirth != null &&
+        !_sameDate(update.dateOfBirth, canonical.dateOfBirth)) {
+      mismatches.add('date_of_birth');
+    }
+    if (update.gender != null && update.gender != canonical.gender) {
+      mismatches.add('gender');
+    }
+    if (update.city != null && update.city != canonical.city) {
+      mismatches.add('city_name');
+    }
+    if (update.aboutMe != null && update.aboutMe != canonical.aboutMe) {
+      mismatches.add('about_me');
+    }
+    final interests = request.interestIds;
+    if (interests != null &&
+        interests
+            .toSet()
+            .difference(
+              canonical.interests.map((interest) => interest.id).toSet(),
+            )
+            .isNotEmpty) {
+      mismatches.add('interests');
+    }
+    if (interests != null &&
+        canonical.interests
+            .map((interest) => interest.id)
+            .toSet()
+            .difference(interests.toSet())
+            .isNotEmpty) {
+      mismatches.add('interests');
+    }
+    for (final entry in request.attributeValues.entries) {
+      if (canonical.attributes.valueFor(entry.key) != entry.value) {
+        mismatches.add(entry.key);
+      }
+    }
+    if (mismatches.isNotEmpty) {
+      throw ProfileSaveVerificationException(
+        mismatches.toSet().toList(growable: false),
+      );
+    }
+  }
+
   void _validatePhoto(ProfilePhotoFile file) {
     final extension = file.name.contains('.')
         ? file.name.split('.').last.toLowerCase()
@@ -218,3 +269,8 @@ class DioProfileRepository implements ProfileRepository {
         String.fromCharCodes(bytes.skip(8).take(4)) == 'WEBP';
   }
 }
+
+bool _sameDate(DateTime? left, DateTime? right) =>
+    left?.year == right?.year &&
+    left?.month == right?.month &&
+    left?.day == right?.day;

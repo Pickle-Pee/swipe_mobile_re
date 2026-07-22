@@ -114,7 +114,11 @@ class ProfileAttributes {
 
   ProfileAttributes copyWithValue(String key, Object? value) =>
       ProfileAttributes(
-        height: key == 'height' ? value as int? : height,
+        height: key == 'height'
+            ? value is int
+                  ? value
+                  : int.tryParse('$value')
+            : height,
         smokingAttitude: key == 'smoking_attitude'
             ? value as String?
             : smokingAttitude,
@@ -667,6 +671,16 @@ class PartialProfileSaveException implements Exception {
   String toString() =>
       'Profile save stopped after ${completedStages.length} '
       'completed section(s): $cause';
+}
+
+class ProfileSaveVerificationException implements Exception {
+  const ProfileSaveVerificationException(this.fields);
+
+  final List<String> fields;
+
+  @override
+  String toString() =>
+      'The server did not apply the saved value for: ${fields.join(', ')}';
 }
 
 class ProfilePhotoFile {

@@ -179,6 +179,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       dirty: edit.isDirty,
                       valid: edit.fieldErrors.isEmpty,
                       saving: edit.isSaving,
+                      photoBusy: profileState.isPhotoBusy,
                       onSave: () => unawaited(_saveAndLeave()),
                     ),
                   ),
@@ -414,7 +415,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final selected = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(1900),
+      firstDate: DateTime(1),
       lastDate: now,
       helpText: 'Date of birth',
     );
@@ -440,6 +441,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _requestExit() async {
     final edit = ref.read(profileEditControllerProvider);
     if (edit.isSaving) return;
+    if (ref.read(profileControllerProvider).isPhotoBusy) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Wait for the photo update to finish')),
+      );
+      return;
+    }
     if (!edit.isDirty) {
       _leave();
       return;
@@ -447,8 +454,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final choice = await showDialog<UnsavedChangesChoice>(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          UnsavedChangesDialog(canSave: edit.canSave, saving: edit.isSaving),
+      builder: (_) => UnsavedChangesDialog(
+        canSave:
+            edit.canSave && !ref.read(profileControllerProvider).isPhotoBusy,
+        saving: edit.isSaving,
+      ),
     );
     if (!mounted || choice == null) return;
     switch (choice) {

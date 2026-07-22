@@ -101,12 +101,16 @@ class ProfileController extends Notifier<ProfileState> {
 
   @override
   ProfileState build() {
-    ref.watch(authControllerProvider.select((auth) => auth.user?.id));
+    final userId = ref.watch(
+      authControllerProvider.select((auth) => auth.user?.id),
+    );
     _failedPhotoFile = null;
+    if (userId != null) Future.microtask(load);
     return const ProfileState();
   }
 
   Future<void> load() async {
+    if (state.status == ProfileStatus.loading && state.profile == null) return;
     final userId = ref.read(authControllerProvider).user?.id;
     state = state.copyWith(
       status: ProfileStatus.loading,
@@ -314,7 +318,10 @@ class ProfileEditController extends Notifier<ProfileEditState> {
   ProfileRepository get _repository => ref.read(profileRepositoryProvider);
 
   @override
-  ProfileEditState build() => const ProfileEditState();
+  ProfileEditState build() {
+    ref.watch(authControllerProvider.select((auth) => auth.user?.id));
+    return const ProfileEditState();
+  }
 
   Future<void> begin(UserProfile profile) async {
     final draft = ProfileEditDraft.fromProfile(profile);

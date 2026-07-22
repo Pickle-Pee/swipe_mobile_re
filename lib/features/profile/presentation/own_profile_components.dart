@@ -620,6 +620,7 @@ class _OwnPhotoStrip extends StatelessWidget {
                     _OwnProfileImage(
                       imageProvider: imageProviderBuilder(photo.url),
                       semanticLabel: 'Profile photo ${index + 1}',
+                      targetWidth: 88,
                     ),
                     if (photo.isAvatar)
                       const Positioned(
@@ -670,10 +671,12 @@ class _OwnProfileImage extends StatelessWidget {
   const _OwnProfileImage({
     required this.imageProvider,
     required this.semanticLabel,
+    this.targetWidth,
   });
 
   final ImageProvider<Object>? imageProvider;
   final String semanticLabel;
+  final double? targetWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -681,7 +684,7 @@ class _OwnProfileImage extends StatelessWidget {
     if (provider == null) {
       return ProfileMediaPlaceholder(semanticLabel: semanticLabel);
     }
-    final logicalWidth = MediaQuery.sizeOf(context).width;
+    final logicalWidth = targetWidth ?? MediaQuery.sizeOf(context).width;
     final decodeWidth = (logicalWidth * MediaQuery.devicePixelRatioOf(context))
         .ceil()
         .clamp(1, 2048)
@@ -811,6 +814,10 @@ String profileErrorMessage(Object? error) {
   if (error is PartialProfileSaveException) {
     return 'Some sections were saved, but the profile update did not finish. '
         'Your remaining draft is still here.';
+  }
+  if (error is ProfileSaveVerificationException) {
+    return 'The server did not apply one or more fields. Your draft is still '
+        'available so you can review and retry.';
   }
   if (error is ApiException) return error.message;
   return 'Something went wrong. Please try again.';

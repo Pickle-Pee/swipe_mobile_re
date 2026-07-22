@@ -73,12 +73,14 @@ class ProfileSaveBar extends StatelessWidget {
     required this.valid,
     required this.saving,
     required this.onSave,
+    this.photoBusy = false,
   });
 
   final bool dirty;
   final bool valid;
   final bool saving;
   final VoidCallback? onSave;
+  final bool photoBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +97,8 @@ class ProfileSaveBar extends StatelessWidget {
               child: Text(
                 saving
                     ? 'Saving changes…'
+                    : photoBusy
+                    ? 'Finish the photo update first'
                     : dirty
                     ? valid
                           ? 'Unsaved changes'
@@ -113,7 +117,7 @@ class ProfileSaveBar extends StatelessWidget {
             icon: Icons.check_rounded,
             loading: saving,
             expanded: false,
-            onPressed: dirty && valid && !saving ? onSave : null,
+            onPressed: dirty && valid && !saving && !photoBusy ? onSave : null,
           ),
         ],
       ),
