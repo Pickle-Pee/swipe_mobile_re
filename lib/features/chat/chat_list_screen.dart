@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/routes.dart';
-import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
+import '../../shared/media/app_network_image.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/liquid_ui.dart';
 import '../../shared/ui/midnight_components.dart';
@@ -263,11 +263,5 @@ class _InlineListError extends StatelessWidget {
 }
 
 ImageProvider<Object>? _chatImageProvider(String? value) {
-  if (value == null || value.trim().isEmpty) return null;
-  final parsed = Uri.tryParse(value);
-  if (parsed == null) return null;
-  final url = parsed.hasScheme
-      ? parsed.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolveUri(parsed).toString();
-  return NetworkImage(url);
+  return appNetworkImage(value);
 }

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/routes.dart';
-import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
+import '../../shared/media/app_network_image.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/discovery_components.dart';
 import '../../shared/ui/liquid_ui.dart';
@@ -570,13 +570,7 @@ String _currentDisplayName(UserProfile? profile) {
 }
 
 ImageProvider<Object>? _networkMatchImage(String? value) {
-  final photo = value?.trim();
-  if (photo == null || photo.isEmpty) return null;
-  final uri = Uri.parse(photo);
-  final resolved = uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(photo).toString();
-  return NetworkImage(resolved);
+  return appNetworkImage(value);
 }
 
 String _matchErrorMessage(Object? error) => error is ApiException

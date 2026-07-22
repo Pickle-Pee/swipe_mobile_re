@@ -6,8 +6,8 @@ import 'package:flutter/semantics.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/routes.dart';
-import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
+import '../../shared/media/app_network_image.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/discovery_components.dart';
 import '../../shared/ui/liquid_ui.dart';
@@ -386,18 +386,9 @@ String _identity(DiscoveryProfile profile) {
 }
 
 ImageProvider<Object>? _profileImage(DiscoveryProfile profile) {
-  final value = profile.photoUrl?.trim();
-  if (value == null || value.isEmpty) return null;
-  return NetworkImage(_mediaUrl(value));
+  return appNetworkImage(profile.photoUrl);
 }
 
 String _errorMessage(Object? error) => error is ApiException
     ? error.message
     : 'Could not complete the request. Please try again.';
-
-String _mediaUrl(String value) {
-  final uri = Uri.parse(value);
-  return uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(value).toString();
-}

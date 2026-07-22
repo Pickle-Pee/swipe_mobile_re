@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/routes.dart';
-import '../../core/config/config.dart';
 import '../../core/network/api_exception.dart';
+import '../../shared/media/app_network_image.dart';
 import '../../shared/theme/tokens.dart';
 import '../../shared/ui/liquid_ui.dart';
 import '../../shared/ui/midnight_components.dart';
@@ -156,7 +156,7 @@ class PublicProfileView extends StatelessWidget {
                     leading: GlassIconButton(
                       key: const Key('public-profile-back'),
                       icon: Icons.arrow_back_rounded,
-                      semanticLabel: 'Back to Discovery',
+                      semanticLabel: 'Back',
                       tooltip: 'Back',
                       onPressed: onBack,
                     ),
@@ -500,13 +500,7 @@ class _PublicProfileStateFrame extends StatelessWidget {
 }
 
 ImageProvider<Object>? _networkProfileImage(String? value) {
-  final photo = value?.trim();
-  if (photo == null || photo.isEmpty) return null;
-  final uri = Uri.parse(photo);
-  final resolved = uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(photo).toString();
-  return NetworkImage(resolved);
+  return appNetworkImage(value);
 }
 
 String _profileErrorMessage(Object? error) => error is ApiException
