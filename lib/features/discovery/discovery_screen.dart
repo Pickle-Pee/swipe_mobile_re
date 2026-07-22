@@ -30,7 +30,10 @@ class _DiscoveryScreenState extends ConsumerState<DiscoveryScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(ref.read(discoveryControllerProvider.notifier).load);
+    if (ref.read(discoveryControllerProvider).status ==
+        DiscoveryStatus.initial) {
+      Future.microtask(ref.read(discoveryControllerProvider.notifier).load);
+    }
   }
 
   @override
