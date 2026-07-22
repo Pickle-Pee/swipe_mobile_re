@@ -183,6 +183,7 @@ class PublicProfileView extends StatelessWidget {
     this.likeLoading = false,
     this.reactionError,
     this.showPassAction = true,
+    this.title = 'Profile',
   });
 
   final PublicProfileState state;
@@ -198,6 +199,7 @@ class PublicProfileView extends StatelessWidget {
   final bool likeLoading;
   final Object? reactionError;
   final bool showPassAction;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +221,7 @@ class PublicProfileView extends StatelessWidget {
                   padding: const EdgeInsets.only(top: AppTokens.space8),
                   child: AppTopBar(
                     key: const Key('public-profile-top-bar'),
-                    title: 'Profile',
+                    title: title,
                     leading: GlassIconButton(
                       key: const Key('public-profile-back'),
                       icon: Icons.arrow_back_rounded,

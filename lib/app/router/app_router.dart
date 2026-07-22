@@ -11,6 +11,9 @@ import '../../features/match/match_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/registration_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/edit_profile_screen.dart';
+import '../../features/profile/domain/profile_models.dart';
+import '../../features/profile/own_profile_preview_screen.dart';
 import '../../features/profile/public_profile_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/subscription/subscription_screen.dart';
@@ -123,6 +126,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final chatId = state.pathParameters['id'] ?? '';
           return ChatScreen(chatId: chatId);
         },
+      ),
+      GoRoute(
+        path: Routes.editProfile,
+        builder: (context, state) => EditProfileScreen(
+          initialSection: state.extra is ProfileEditSection
+              ? state.extra! as ProfileEditSection
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: Routes.profilePreview,
+        builder: (context, state) => const OwnProfilePreviewScreen(),
       ),
       GoRoute(
         path: Routes.settings,

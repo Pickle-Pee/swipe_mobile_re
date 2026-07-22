@@ -8,6 +8,8 @@ class Routes {
   static const chats = '/chats';
   static const chat = '/chat/:id';
   static const profile = '/profile';
+  static const editProfile = '/profile/edit';
+  static const profilePreview = '/profile/preview';
   static const likes = '/likes';
   static const settings = '/settings';
   static const premium = '/premium';

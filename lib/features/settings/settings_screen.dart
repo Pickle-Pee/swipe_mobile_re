@@ -26,7 +26,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () => context.go(Routes.discover),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go(Routes.discover);
+                    }
+                  },
                   icon: const Icon(Icons.chevron_left_rounded),
                 ),
                 Text('Settings', style: Theme.of(context).textTheme.titleLarge),

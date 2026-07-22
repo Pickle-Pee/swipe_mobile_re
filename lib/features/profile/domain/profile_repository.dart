@@ -5,12 +5,15 @@ import 'profile_models.dart';
 
 abstract interface class ProfileRepository {
   Future<UserProfile> getCurrentProfile();
+  Future<ProfileEditCatalog> getEditCatalog();
   Future<UserProfile> updateProfile(ProfileUpdate update);
+  Future<UserProfile> saveProfile(ProfileSaveRequest request);
   Future<UserProfile> uploadPhoto(
     ProfilePhotoFile file, {
     bool isAvatar = false,
     ProgressCallback? onProgress,
   });
+  Future<UserProfile> deletePhoto(int photoId, {bool wasAvatar = false});
   Future<UserProfile> setAvatar(int photoId);
 }
 
@@ -37,18 +40,100 @@ class DioProfileRepository implements ProfileRepository {
     final photos = photoItems
         .whereType<Map<String, dynamic>>()
         .map(ProfilePhoto.fromJson)
-        .toList();
+        .toList(growable: false);
     return UserProfile.fromJson(profileData).withPhotos(photos);
   }
 
   @override
-  Future<UserProfile> updateProfile(ProfileUpdate update) async {
-    await _apiClient.request<void>(
-      '/user/update_user',
-      method: 'PUT',
-      data: update.toJson(),
+  Future<ProfileEditCatalog> getEditCatalog() async {
+    final responses = await Future.wait([
+      _apiClient.get<Map<String, dynamic>>('/interest/interests_list'),
+      _apiClient.get<Map<String, dynamic>>('/attributes/'),
+    ]);
+    final interestsData = responses[0].data;
+    final attributesData = responses[1].data;
+    final interestItems =
+        interestsData?['interests'] as List<dynamic>? ?? const [];
+    final attributes = <String, List<ProfileAttributeOption>>{};
+    if (attributesData != null) {
+      for (final entry in attributesData.entries) {
+        final value = entry.value;
+        if (value is! List<dynamic>) continue;
+        attributes[entry.key] = value
+            .whereType<Map<String, dynamic>>()
+            .map(ProfileAttributeOption.fromJson)
+            .where((option) => option.description.trim().isNotEmpty)
+            .toList(growable: false);
+      }
+    }
+    return ProfileEditCatalog(
+      interests: interestItems
+          .whereType<Map<String, dynamic>>()
+          .map(ProfileInterest.fromJson)
+          .where(
+            (interest) => interest.id > 0 && interest.label.trim().isNotEmpty,
+          )
+          .toList(growable: false),
+      attributes: attributes,
     );
+  }
+
+  @override
+  Future<UserProfile> updateProfile(ProfileUpdate update) async {
+    if (!update.isEmpty) {
+      await _apiClient.request<void>(
+        '/user/update_user',
+        method: 'PUT',
+        data: update.toJson(),
+      );
+    }
     return getCurrentProfile();
+  }
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) async {
+    if (request.isEmpty) return getCurrentProfile();
+    final completed = <ProfileSaveStage>[];
+    try {
+      if (!request.profile.isEmpty) {
+        await _apiClient.request<void>(
+          '/user/update_user',
+          method: 'PUT',
+          data: request.profile.toJson(),
+        );
+        completed.add(ProfileSaveStage.basicInfo);
+      }
+      final interests = request.interestIds;
+      if (interests != null) {
+        await _apiClient.post<void>(
+          '/interest/add_interests',
+          data: {'interest_ids': interests},
+        );
+        completed.add(ProfileSaveStage.interests);
+      }
+      if (request.attributeValues.isNotEmpty) {
+        await _apiClient.post<void>(
+          '/attributes/add_attributes',
+          data: request.attributeValues,
+        );
+        completed.add(ProfileSaveStage.attributes);
+      }
+      return await getCurrentProfile();
+    } on Object catch (error) {
+      if (completed.isEmpty) rethrow;
+      UserProfile? canonical;
+      try {
+        canonical = await getCurrentProfile();
+      } on Object {
+        // The original error remains the actionable failure. A later retry
+        // will refresh canonical state before publishing success.
+      }
+      throw PartialProfileSaveException(
+        completedStages: List.unmodifiable(completed),
+        cause: error,
+        canonicalProfile: canonical,
+      );
+    }
   }
 
   @override
@@ -68,6 +153,19 @@ class DioProfileRepository implements ProfileRepository {
       onSendProgress: onProgress,
     );
     return getCurrentProfile();
+  }
+
+  @override
+  Future<UserProfile> deletePhoto(int photoId, {bool wasAvatar = false}) async {
+    await _apiClient.request<void>('/user/photos/$photoId', method: 'DELETE');
+    var profile = await getCurrentProfile();
+    if (wasAvatar && profile.photos.isNotEmpty && profile.avatarPhoto == null) {
+      await _apiClient.post<void>(
+        '/user/set_avatar/${profile.photos.first.id}',
+      );
+      profile = await getCurrentProfile();
+    }
+    return profile;
   }
 
   @override
