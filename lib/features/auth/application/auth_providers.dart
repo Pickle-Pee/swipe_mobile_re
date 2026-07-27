@@ -30,67 +30,107 @@ final authControllerProvider = NotifierProvider<AuthController, AuthState>(
 
 class AuthController extends Notifier<AuthState> {
   AuthRepository get _repository => ref.read(authRepositoryProvider);
+  Future<void>? _restoreFuture;
+  var _sessionEpoch = 0;
 
   @override
-  AuthState build() => const AuthState.initial();
+  AuthState build() {
+    _restoreFuture = null;
+    return const AuthState.initial();
+  }
 
-  Future<void> restoreSession() =>
-      _authenticate(_repository.restoreSession, nullIsUnauthenticated: true);
+  Future<void> restoreSession() {
+    final running = _restoreFuture;
+    if (running != null) return running;
+    if (state.isAuthenticated || state.status == AuthStatus.signingOut) {
+      return Future.value();
+    }
 
-  Future<void> login(LoginRequest request) =>
+    late final Future<void> tracked;
+    tracked = _performRestore().whenComplete(() {
+      if (identical(_restoreFuture, tracked)) _restoreFuture = null;
+    });
+    _restoreFuture = tracked;
+    return tracked;
+  }
+
+  Future<bool> login(LoginRequest request) =>
       _authenticate(() => _repository.login(request));
 
-  Future<void> register(RegisterRequest request) =>
+  Future<bool> register(RegisterRequest request) =>
       _authenticate(() => _repository.register(request));
 
-  Future<void> refreshSession() => _authenticate(_repository.refreshSession);
+  Future<void> refreshSession() async {
+    final epoch = _sessionEpoch;
+    state = const AuthState.restoring();
+    try {
+      final user = await _repository.refreshSession();
+      if (epoch == _sessionEpoch) state = AuthState.authenticated(user);
+    } on UnauthorizedApiException catch (error) {
+      if (epoch == _sessionEpoch) state = AuthState.unauthenticated(error);
+    } on Object catch (error) {
+      if (epoch == _sessionEpoch) state = AuthState.restoreError(error);
+    }
+  }
 
   Future<void> logout() async {
-    state = const AuthState.loading();
+    if (state.status == AuthStatus.signingOut) return;
+    _sessionEpoch++;
+    state = const AuthState.signingOut();
     try {
       await _repository.logout();
       state = const AuthState.unauthenticated();
     } on Object catch (error) {
-      state = AuthState.error(error);
+      state = AuthState.unauthenticated(error);
     }
   }
 
-  Future<void> sendCode(SendCodeRequest request) => _runAction(() async {
-    await _repository.sendCode(request);
-  });
+  void sessionInvalidated() {
+    if (state.status == AuthStatus.signingOut ||
+        state.status == AuthStatus.unauthenticated) {
+      return;
+    }
+    _sessionEpoch++;
+    state = const AuthState.unauthenticated();
+  }
+
+  Future<SendCodeResponse> sendCode(SendCodeRequest request) =>
+      _repository.sendCode(request);
 
   Future<void> checkCode(CheckCodeRequest request) =>
-      _runAction(() => _repository.checkCode(request));
+      _repository.checkCode(request);
 
-  Future<void> _authenticate(
-    Future<AuthUser?> Function() operation, {
-    bool nullIsUnauthenticated = false,
-  }) async {
-    state = const AuthState.loading();
+  Future<void> _performRestore() async {
+    final epoch = _sessionEpoch;
+    state = const AuthState.restoring();
     try {
-      final user = await operation();
-      if (user == null && nullIsUnauthenticated) {
-        state = const AuthState.unauthenticated();
-      } else if (user != null) {
-        state = AuthState.authenticated(user);
-      } else {
-        state = const AuthState.unauthenticated();
-      }
-    } on UnauthorizedApiException {
-      state = const AuthState.unauthenticated();
+      final user = await _repository.restoreSession();
+      if (epoch != _sessionEpoch) return;
+      state = user == null
+          ? const AuthState.unauthenticated()
+          : AuthState.authenticated(user);
+    } on UnauthorizedApiException catch (error) {
+      if (epoch == _sessionEpoch) state = AuthState.unauthenticated(error);
     } on Object catch (error) {
-      state = AuthState.error(error);
+      if (epoch == _sessionEpoch) state = AuthState.restoreError(error);
     }
   }
 
-  Future<void> _runAction(Future<void> Function() operation) async {
-    final previous = state;
-    state = const AuthState.loading();
+  Future<bool> _authenticate(Future<AuthUser> Function() operation) async {
+    if (state.status == AuthStatus.submitting) return false;
+    final epoch = _sessionEpoch;
+    state = const AuthState.submitting();
     try {
-      await operation();
-      state = previous;
+      final user = await operation();
+      if (epoch != _sessionEpoch) return false;
+      state = AuthState.authenticated(user);
+      return true;
+    } on UnauthorizedApiException catch (error) {
+      if (epoch == _sessionEpoch) state = AuthState.unauthenticated(error);
+      return false;
     } on Object catch (error) {
-      state = AuthState.error(error);
+      if (epoch == _sessionEpoch) state = AuthState.unauthenticated(error);
+      return false;
     }
   }
 }

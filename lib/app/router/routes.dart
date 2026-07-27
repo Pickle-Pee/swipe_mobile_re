@@ -1,4 +1,6 @@
 class Routes {
+  static const bootstrap = '/bootstrap';
+  static const welcome = '/welcome';
   static const onboarding = '/onboarding';
   static const authPhone = '/auth/phone';
   static const register = '/register';
@@ -13,6 +15,9 @@ class Routes {
   static const likes = '/likes';
   static const settings = '/settings';
   static const premium = '/premium';
+
+  static const loginPhone = '$authPhone?intent=login';
+  static const registrationPhone = '$authPhone?intent=registration';
 
   static String publicProfileFor(int userId) => '/discover/profile/$userId';
   static String publicProfileFromLikesFor(int userId) =>
