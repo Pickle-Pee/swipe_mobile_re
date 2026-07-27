@@ -106,7 +106,15 @@ class DioAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser?> restoreSession() async {
-    if (!await _storage.hasSession) {
+    final accessToken = await _storage.readAccessToken();
+    final refreshToken = await _storage.readRefreshToken();
+    final hasAccessToken = accessToken?.isNotEmpty == true;
+    final hasRefreshToken = refreshToken?.isNotEmpty == true;
+    if (!hasAccessToken && !hasRefreshToken) {
+      return null;
+    }
+    if (!hasAccessToken || !hasRefreshToken) {
+      await logout();
       return null;
     }
     try {

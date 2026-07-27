@@ -171,7 +171,14 @@ class ApiClient {
       }
       await _tokenStore.saveTokens(accessToken, newRefreshToken);
       return true;
-    } on Object {
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 400 || statusCode == 401 || statusCode == 403) {
+        await _clearSession();
+        return false;
+      }
+      throw _mapException(error);
+    } on FormatException {
       await _clearSession();
       return false;
     }
@@ -191,6 +198,8 @@ class ApiClient {
   }
 
   static ApiException _mapException(DioException error) {
+    final cause = error.error;
+    if (cause is ApiException) return cause;
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
     final message =
@@ -274,8 +283,20 @@ class _AuthInterceptor extends Interceptor {
       return;
     }
 
-    if (!await _client._refreshOnce()) {
-      handler.next(error);
+    try {
+      if (!await _client._refreshOnce()) {
+        handler.next(error);
+        return;
+      }
+    } on ApiException catch (refreshError) {
+      handler.reject(
+        DioException(
+          requestOptions: request,
+          error: refreshError,
+          message: refreshError.message,
+          type: DioExceptionType.unknown,
+        ),
+      );
       return;
     }
 
