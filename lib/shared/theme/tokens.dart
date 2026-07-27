@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Semantic values for the Midnight Aura Glass visual language.
-///
-/// Legacy aliases remain at the bottom of the class while screens outside the
-/// DES-01 scope are migrated incrementally.
 class AppTokens {
   const AppTokens._();
 
@@ -112,36 +109,6 @@ class AppTokens {
       blurRadius: 22,
       spreadRadius: -8,
       offset: Offset(0, 10),
-    ),
-  ];
-
-  // Compatibility aliases for screens outside DES-01.
-  static const Color bgTop = backgroundElevated;
-  static const Color bgMid = backgroundBase;
-  static const Color bgBottom = backgroundBase;
-  static const Color secondary = textPrimary;
-  static const Color border = glassBorder;
-  static const Color surface = glassMedium;
-  static const Color surfaceStrong = surfaceTranslucent;
-  static const Color pinkSoft = brandRose;
-  static const Color pink = brandRose;
-  static const Color violet = brandViolet;
-  static const Color blueSoft = brandViolet;
-  static const Color cyan = textSecondary;
-  static const Color mint = success;
-  static const double radiusXs = radiusSmall;
-  static const double radiusMd = radiusMedium;
-  static const double radiusLg = radiusLarge;
-  static const double blurSm = blurOverlay;
-  static const double blurMd = blurNavigation;
-  static const LinearGradient coolGradient = missingMediaGradient;
-
-  static List<BoxShadow> glowShadow([Color color = brandRose]) => [
-    BoxShadow(
-      color: color.withValues(alpha: 0.20),
-      blurRadius: 22,
-      spreadRadius: -8,
-      offset: const Offset(0, 10),
     ),
   ];
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:swipe_mobile_re/app/router/routes.dart';
 import 'package:swipe_mobile_re/features/chat/application/chat_providers.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_models.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_repository.dart';
@@ -131,7 +132,10 @@ void main() {
 
       await tester.tap(find.byKey(const Key('match-start-chat')));
       await tester.pumpAndSettle();
-      expect(router.routeInformationProvider.value.uri.path, '/chat/42');
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        Routes.chatFor(42),
+      );
       expect(find.byKey(const Key('flow-chat-destination')), findsOneWidget);
       expect(chatRepository.lookupCalls, 1);
       expect(chatRepository.createCalls, 0);
@@ -164,7 +168,7 @@ GoRouter flowRouter() => GoRouter(
       ),
     ),
     GoRoute(
-      path: '/chat/:id',
+      path: Routes.chat,
       builder: (context, state) => Scaffold(
         body: Center(
           child: Text(

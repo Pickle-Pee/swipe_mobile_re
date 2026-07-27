@@ -13,7 +13,6 @@ import '../features/profile/application/public_profile_providers.dart';
 import '../features/settings/application/discovery_preferences_providers.dart';
 import '../features/subscription/application/subscription_providers.dart';
 import 'router/app_router.dart';
-import 'providers/navigation_events_provider.dart';
 
 class App extends ConsumerStatefulWidget {
   const App({super.key});
@@ -23,7 +22,6 @@ class App extends ConsumerStatefulWidget {
 }
 
 class _AppState extends ConsumerState<App> {
-  StreamSubscription? _navSub;
   StreamSubscription<String?>? _tokenSub;
   ProviderSubscription<AuthState>? _authSub;
   var _hadAuthenticatedSession = false;
@@ -33,15 +31,9 @@ class _AppState extends ConsumerState<App> {
   void initState() {
     super.initState();
 
-    // Subscribe once at app start
-    final nav = ref.read(navigationEventsProvider);
-    final router = ref.read(appRouterProvider);
     ref.read(chatSocketManagerProvider);
     ref.read(chatRealtimeProvider);
 
-    _navSub = nav.stream.listen((event) {
-      router.go(event.route);
-    });
     _tokenSub = ref.read(sessionStorageProvider).accessTokenChanges.listen((
       token,
     ) {
@@ -97,7 +89,6 @@ class _AppState extends ConsumerState<App> {
 
   @override
   void dispose() {
-    _navSub?.cancel();
     _tokenSub?.cancel();
     _authSub?.close();
     super.dispose();
@@ -106,11 +97,12 @@ class _AppState extends ConsumerState<App> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    final theme = AppTheme.midnight();
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.midnight(),
-      darkTheme: AppTheme.dark(),
+      theme: theme,
+      darkTheme: theme,
       themeMode: ThemeMode.dark,
       routerConfig: router,
     );

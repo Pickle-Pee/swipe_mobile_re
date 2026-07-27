@@ -111,7 +111,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       });
       return;
     }
-    context.go('/chat/$chatId');
+    context.go(Routes.chatFor(chatId));
   }
 
   void _continueDiscovering() => context.go(Routes.discover);

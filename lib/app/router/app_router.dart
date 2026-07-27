@@ -190,7 +190,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/chat/:id',
+        path: Routes.chat,
         builder: (context, state) {
           final chatId = state.pathParameters['id'] ?? '';
           return ChatScreen(chatId: chatId);
