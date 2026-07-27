@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/core/network/api_client.dart';
+import 'package:swipe_mobile_re/core/network/api_exception.dart';
 import 'package:swipe_mobile_re/features/auth/data/session_storage.dart';
 import 'package:swipe_mobile_re/features/auth/domain/auth_models.dart';
 import 'package:swipe_mobile_re/features/auth/domain/auth_repository.dart';
@@ -138,6 +140,72 @@ void main() {
 
     expect(user, isNull);
     expect(await storage.hasSession, isFalse);
+  });
+
+  test('partial token storage is cleared without an HTTP request', () async {
+    backend.values[SessionStorage.accessTokenKey] = 'orphaned-access';
+    final repository = createRepository((options) async {
+      fail('a partial session must not perform an HTTP request');
+    });
+
+    final user = await repository.restoreSession();
+
+    expect(user, isNull);
+    expect(backend.values, isEmpty);
+  });
+
+  test('refresh network failure preserves secure session for retry', () async {
+    await storage.saveTokens('expired-access', 'saved-refresh');
+    final repository = createRepository((options) async {
+      if (options.path == '/auth/refresh_token') {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          message: 'offline',
+        );
+      }
+      return jsonResponse(401, {'detail': 'expired'});
+    });
+
+    await expectLater(
+      repository.restoreSession(),
+      throwsA(isA<NetworkApiException>()),
+    );
+
+    expect(await storage.readAccessToken(), 'expired-access');
+    expect(await storage.readRefreshToken(), 'saved-refresh');
+  });
+
+  test('concurrent unauthorized requests share one refresh', () async {
+    await storage.saveTokens('expired-access', 'shared-refresh');
+    final refreshResponse = Completer<ResponseBody>();
+    var refreshCalls = 0;
+    final repository = createRepository((options) async {
+      if (options.path == '/auth/refresh_token') {
+        refreshCalls++;
+        return refreshResponse.future;
+      }
+      if (options.headers['Authorization'] == 'Bearer fresh-access') {
+        return jsonResponse(200, {'id': 14});
+      }
+      return jsonResponse(401, {'detail': 'expired'});
+    });
+
+    final first = repository.whoAmI();
+    final second = repository.whoAmI();
+    await Future<void>.delayed(Duration.zero);
+    expect(refreshCalls, 1);
+
+    refreshResponse.complete(
+      jsonResponse(200, {
+        'access_token': 'fresh-access',
+        'refresh_token': 'fresh-refresh',
+      }),
+    );
+
+    final users = await Future.wait([first, second]);
+    expect(users.map((user) => user.id), everyElement(14));
+    expect(refreshCalls, 1);
   });
 }
 
