@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/chat/chat_list_screen.dart';
 import '../../features/chat/chat_screen.dart';
-import '../../features/auth/application/auth_providers.dart';
 import '../../features/auth/presentation/app_bootstrap_screen.dart';
 import '../../features/auth/presentation/phone_auth_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
@@ -15,7 +14,6 @@ import '../../features/match/match_screen.dart';
 import '../../features/onboarding/application/onboarding_providers.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/onboarding/registration_screen.dart';
-import '../../features/profile/application/profile_providers.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/edit_profile_screen.dart';
 import '../../features/profile/domain/profile_models.dart';
@@ -29,9 +27,11 @@ import 'routes.dart';
 
 final _routerRefreshProvider = Provider<_RouterRefreshNotifier>((ref) {
   final notifier = _RouterRefreshNotifier();
-  ref.listen(authControllerProvider, (_, _) => notifier.refresh());
-  ref.listen(profileControllerProvider, (_, _) => notifier.refresh());
-  ref.listen(onboardingControllerProvider, (_, _) => notifier.refresh());
+  ref.listen(appGateProvider, (_, _) => notifier.refresh());
+  ref.listen(
+    onboardingControllerProvider.select((state) => state.active),
+    (_, _) => notifier.refresh(),
+  );
   ref.onDispose(notifier.dispose);
   return notifier;
 });
