@@ -10,6 +10,7 @@ import '../features/likes/application/likes_providers.dart';
 import '../features/onboarding/application/onboarding_providers.dart';
 import '../features/profile/application/profile_providers.dart';
 import '../features/profile/application/public_profile_providers.dart';
+import '../features/settings/application/discovery_preferences_providers.dart';
 import '../features/subscription/application/subscription_providers.dart';
 import 'router/app_router.dart';
 import 'providers/navigation_events_provider.dart';
@@ -26,6 +27,7 @@ class _AppState extends ConsumerState<App> {
   StreamSubscription<String?>? _tokenSub;
   ProviderSubscription<AuthState>? _authSub;
   var _hadAuthenticatedSession = false;
+  int? _authenticatedUserId;
 
   @override
   void initState() {
@@ -49,10 +51,13 @@ class _AppState extends ConsumerState<App> {
         ref.read(authControllerProvider.notifier).sessionInvalidated();
       }
     });
-    _hadAuthenticatedSession = ref.read(authControllerProvider).isAuthenticated;
+    final initialAuth = ref.read(authControllerProvider);
+    _hadAuthenticatedSession = initialAuth.isAuthenticated;
+    _authenticatedUserId = initialAuth.user?.id;
     _authSub = ref.listenManual<AuthState>(authControllerProvider, (_, next) {
       if (next.isAuthenticated) {
         _hadAuthenticatedSession = true;
+        _authenticatedUserId = next.user?.id;
         return;
       }
       final endedSession =
@@ -61,16 +66,26 @@ class _AppState extends ConsumerState<App> {
               next.status == AuthStatus.unauthenticated);
       if (endedSession) {
         _hadAuthenticatedSession = false;
-        _clearPrivateState();
+        final userId = _authenticatedUserId;
+        _authenticatedUserId = null;
+        _clearPrivateState(userId);
       }
     });
   }
 
-  void _clearPrivateState() {
+  void _clearPrivateState(int? userId) {
+    if (userId != null) {
+      final preferenceCleanup = ref
+          .read(discoveryPreferencesStorageProvider)
+          .clear(userId)
+          .catchError((Object _) {});
+      unawaited(preferenceCleanup);
+    }
     ref.invalidate(onboardingControllerProvider);
     ref.invalidate(profileEditControllerProvider);
     ref.invalidate(profileControllerProvider);
     ref.invalidate(publicProfileControllerProvider);
+    ref.invalidate(discoveryPreferencesControllerProvider);
     ref.invalidate(discoveryControllerProvider);
     ref.invalidate(likesControllerProvider);
     ref.invalidate(chatMessagesControllerProvider);
