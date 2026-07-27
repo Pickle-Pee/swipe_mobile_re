@@ -7,6 +7,7 @@ import 'package:swipe_mobile_re/features/chat/domain/chat_models.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_repository.dart';
 import 'package:swipe_mobile_re/features/discovery/application/discovery_providers.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 import 'package:swipe_mobile_re/features/likes/application/likes_providers.dart';
 import 'package:swipe_mobile_re/features/likes/domain/likes_models.dart';
@@ -268,7 +269,9 @@ class FlowDiscoveryRepository implements DiscoveryRepository {
   int reactionCalls = 0;
 
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async => const [];
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async => const [];
 
   @override
   Future<DiscoveryReactionResult> react(

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/core/network/api_client.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 
 void main() {
@@ -46,12 +47,23 @@ void main() {
   });
 
   test('loads match ids then enriches cards from user API', () async {
-    final profiles = await repository.getProfiles();
+    final profiles = await repository.getProfiles(
+      const DiscoveryPreferences(
+        minAge: 24,
+        maxAge: 36,
+        whatLookingFor: 'Serious relationship',
+      ),
+    );
 
     expect(profiles.single.firstName, 'Real profile');
     expect(profiles.single.aboutMe, 'From database');
     expect(profiles.single.interests.single.label, 'Travel');
     expect(profiles.single.attributes['Height'], '170');
+    expect(adapter.queryParameters.first, {
+      'minAge': 24,
+      'maxAge': 36,
+      'whatLookingFor': 'Serious relationship',
+    });
   });
 
   test('like and pass use server endpoints', () async {
@@ -69,6 +81,7 @@ class MockHttpAdapter implements HttpClientAdapter {
   MockHttpAdapter(this._handler);
   final MockHandler _handler;
   final List<String> paths = [];
+  final List<Map<String, dynamic>> queryParameters = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -77,6 +90,7 @@ class MockHttpAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) {
     paths.add(options.path);
+    queryParameters.add(Map<String, dynamic>.from(options.queryParameters));
     return _handler(options);
   }
 

@@ -8,6 +8,7 @@ import 'package:swipe_mobile_re/features/auth/application/auth_providers.dart';
 import 'package:swipe_mobile_re/features/auth/domain/auth_models.dart';
 import 'package:swipe_mobile_re/features/auth/domain/auth_repository.dart';
 import 'package:swipe_mobile_re/features/settings/settings_screen.dart';
+import 'package:swipe_mobile_re/features/subscription/application/subscription_providers.dart';
 import 'package:swipe_mobile_re/shared/ui/app_theme.dart';
 
 void main() {
@@ -33,7 +34,12 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          subscriptionAccessControllerProvider.overrideWith(
+            _InactiveSubscriptionController.new,
+          ),
+        ],
         child: MaterialApp.router(
           theme: AppTheme.midnight(),
           routerConfig: router,
@@ -43,6 +49,13 @@ void main() {
 
     await tester.tap(find.byKey(const Key('settings-logout')));
     await tester.tap(find.byKey(const Key('settings-logout')));
+    await tester.pumpAndSettle();
+    expect(repository.logoutCalls, 0);
+    expect(find.text('Sign out of Swipe?'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirm-settings-logout')));
+    await tester.tap(find.byKey(const Key('confirm-settings-logout')));
+    await tester.pump();
     expect(repository.logoutCalls, 1);
 
     repository.logoutCompleter.complete();
@@ -90,4 +103,10 @@ class _LogoutRepository implements AuthRepository {
 
   @override
   Future<AuthUser> whoAmI() async => const AuthUser(id: 1);
+}
+
+class _InactiveSubscriptionController extends SubscriptionAccessController {
+  @override
+  SubscriptionAccessState build() =>
+      const SubscriptionAccessState(status: SubscriptionAccessStatus.inactive);
 }

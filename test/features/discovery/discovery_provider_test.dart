@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swipe_mobile_re/features/discovery/application/discovery_providers.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 
 void main() {
@@ -132,7 +133,9 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
   int reactionCalls = 0;
 
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async => profiles;
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async => profiles;
 
   @override
   Future<DiscoveryReactionResult> react(

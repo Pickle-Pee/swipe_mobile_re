@@ -8,6 +8,7 @@ import 'package:swipe_mobile_re/features/auth/domain/auth_models.dart';
 import 'package:swipe_mobile_re/features/auth/domain/auth_repository.dart';
 import 'package:swipe_mobile_re/features/discovery/application/discovery_providers.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 import 'package:swipe_mobile_re/features/profile/application/profile_providers.dart';
 import 'package:swipe_mobile_re/features/profile/domain/profile_models.dart';
@@ -42,6 +43,10 @@ void main() {
     await tester.pump();
     expect(router.state.uri.path, Routes.welcome);
     expect(find.text('Meet people\nat your pace.'), findsOneWidget);
+
+    router.go(Routes.deleteAccount);
+    await tester.pump();
+    expect(router.state.uri.path, Routes.welcome);
   });
 
   testWidgets('ready gate replaces bootstrap after profile restore', (
@@ -163,7 +168,9 @@ class _ReadyProfileRepository implements ProfileRepository {
 
 class _EmptyDiscoveryRepository implements DiscoveryRepository {
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async => const [];
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async => const [];
 
   @override
   Future<DiscoveryReactionResult> react(

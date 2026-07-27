@@ -8,6 +8,7 @@ import 'package:swipe_mobile_re/features/chat/domain/chat_repository.dart';
 import 'package:swipe_mobile_re/features/discovery/application/discovery_providers.dart';
 import 'package:swipe_mobile_re/features/discovery/discovery_screen.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 import 'package:swipe_mobile_re/features/match/match_screen.dart';
 import 'package:swipe_mobile_re/features/profile/application/profile_providers.dart';
@@ -145,7 +146,9 @@ class _FakeDiscoveryRepository implements DiscoveryRepository {
   int reactionCalls = 0;
 
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async => [_discovery];
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async => [_discovery];
 
   @override
   Future<DiscoveryReactionResult> react(
