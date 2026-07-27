@@ -197,3 +197,19 @@ Golden baselines остаются в репозитории. Причина skip
 6. Обновить canonical architecture и устаревшие historical notes.
 7. Выполнить полный format/analyze/test/build/profile/manual regression gate.
 
+## Результат выполнения
+
+DES-08 применил все решения REMOVE/MIGRATE из этого аудита:
+
+- удалено 30 Dart-файлов и 4 804 строки недостижимого state/network/socket
+  подграфа;
+- удалены shader asset, compatibility widgets/tokens/theme aliases, event bus,
+  второй token storage и MobX dependency;
+- все 81 оставшихся Dart-файла достижимы транзитивно от `lib/main.dart`;
+- `flutter analyze --no-pub` — clean;
+- `flutter test --no-pub` — 310 tests passed;
+- 31 отложенный DES-05/06/07 golden baseline создан, визуально просмотрен и
+  включён в обычный test gate.
+
+Итоговый build/profile/manual status дополняется после release gate; canonical
+структура закреплена в `CANONICAL_UI_ARCHITECTURE.md`.

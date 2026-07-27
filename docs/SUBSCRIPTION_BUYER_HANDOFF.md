@@ -1,6 +1,7 @@
 # Flutter subscription buyer handoff
 
-Актуально для Flutter commit `ba4edb0`, Subscription API v1 и backend handoff `swipe_api/docs/integrations/TBANK_BUYER_HANDOFF.md` на 2026-07-13.
+Актуально после Flutter DES-08 cleanup на 2026-07-27, для Subscription API v1
+и backend handoff `swipe_api/docs/integrations/TBANK_BUYER_HANDOFF.md`.
 
 ## Ответственность Flutter
 
@@ -88,7 +89,10 @@ flutter test
 flutter build apk --debug
 ```
 
-Последний SUB-05 прогон: 51 Flutter tests passed, subscription target analyze чист, debug APK собран. Полный analyze содержит 271 legacy issue вне subscription-модуля и пока не является зелёным release gate.
+DES-08 cleanup gate на 2026-07-27: полный `flutter analyze` чист, все
+310 Flutter tests проходят, включая активированные auth/onboarding,
+own-profile и Settings goldens. Результаты APK/profile/manual gate фиксируются
+в `docs/architecture/LEGACY_CLEANUP_AUDIT.md`.
 
 Ручная проверка:
 

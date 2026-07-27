@@ -4,6 +4,7 @@ Android-клиент Swipe. Конфигурация окружений зада
 
 - Контракт подписок: `docs/contracts/SUBSCRIPTION_API.md`.
 - Запуск demo, production build и buyer checklist: `docs/SUBSCRIPTION_BUYER_HANDOFF.md`.
+- Каноническая Flutter-архитектура: `docs/architecture/CANONICAL_UI_ARCHITECTURE.md`.
 
 ## Локальный demo на Android Emulator
 

@@ -86,7 +86,7 @@ Unknown/malformed values fail visibly. Display price derives from minor units an
 
 ## Compatibility and environments
 
-Flutter поддерживает только перечисленные в этом документе canonical endpoints. Checkout передаёт только `subscription_id` и `Idempotency-Key`; цена, order id, customer data и банковские параметры на клиенте не формируются. Старые singleton/MethodChannel services и дублирующие DTO удалены в REM-04. `/premium` currently has no auth guard.
+Flutter поддерживает только перечисленные в этом документе canonical endpoints. Checkout передаёт только `subscription_id` и `Idempotency-Key`; цена, order id, customer data и банковские параметры на клиенте не формируются. Старые singleton/MethodChannel services и дублирующие DTO удалены в REM-04/DES-08. `/premium` проходит через общий `AppGate`, как и остальные private routes.
 
 Demo uses backend fake provider and same DTO/state path, with visible label; test DEMO terminal and production secrets remain backend-only. Production forbids demo/local URLs. Automatic recurring Charge is outside this stage; `renewable` is metadata until a separate approved task.
 

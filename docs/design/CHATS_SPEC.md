@@ -51,9 +51,9 @@ to newest. The initial page contains at most 30 newest messages. Older pages use
 the opaque `next_cursor` as `before`; Socket.IO never returns history.
 
 The backend payload can describe text, image, and voice records. The active
-Riverpod send path is complete only for text. Image/voice upload methods and a
-voice model still exist in the legacy MobX layer, but the production composer
-does not own a media picker, recorder, or audio player. DES-03 therefore:
+Riverpod send path is complete only for text. DES-08 removed the unused legacy
+MobX upload/socket layer. The production composer does not own a media picker,
+recorder, audio player, or a second message model. It therefore:
 
 - fully renders, sends, acknowledges, retries, and statuses text messages;
 - does not expose attachment or voice controls that are not wired to the

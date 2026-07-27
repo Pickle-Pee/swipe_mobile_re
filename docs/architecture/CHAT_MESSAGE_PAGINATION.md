@@ -70,9 +70,9 @@ the backend. Socket.IO never requests or receives full history.
 
 The active `features/chat` flow no longer references `get_messages`. The
 backend temporarily answers an old request with `history_deprecated` and no
-message array. The orphaned MobX/socket implementation still contains the old
-client API and should be deleted in a separate cleanup after the compatibility
-window; it is not wired to the active routes.
+message array for external compatibility. DES-08 removed the orphaned
+MobX/socket client, so Flutter now has no producer, listener, model, or test
+path for socket history.
 
 Text, image, and voice history fields keep their existing rendering behavior.
 Only text sending is exposed by the current composer.
