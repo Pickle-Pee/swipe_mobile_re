@@ -239,32 +239,39 @@ class ProfilePhotoManager extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppTokens.space16),
-        GridView.builder(
+        LayoutBuilder(
           key: const Key('profile-photo-manager'),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: AppTokens.space12,
-            mainAxisSpacing: AppTokens.space12,
-            childAspectRatio: 0.76,
-          ),
-          itemCount: photos.length + 1,
-          itemBuilder: (context, index) {
-            if (index == photos.length) {
-              return AddPhotoTile(enabled: !busy, onTap: onAdd);
-            }
-            final photo = photos[index];
-            return EditableProfilePhoto(
-              key: ValueKey<String>('editable-photo-${photo.id}'),
-              photo: photo,
-              imageProvider: imageProviderBuilder(photo.url),
-              busy: state.photoTargetId == photo.id && busy,
-              controlsEnabled: !busy,
-              onDelete: () => onDelete(photo),
-              onSetPrimary: photo.isAvatar
-                  ? null
-                  : () => onSetPrimary(photo.id),
+          builder: (context, constraints) {
+            const spacing = AppTokens.space12;
+            final tileWidth = (constraints.maxWidth - spacing) / 2;
+            final tileHeight = tileWidth / 0.76;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: List<Widget>.generate(photos.length + 1, (index) {
+                final Widget tile;
+                if (index == photos.length) {
+                  tile = AddPhotoTile(enabled: !busy, onTap: onAdd);
+                } else {
+                  final photo = photos[index];
+                  tile = EditableProfilePhoto(
+                    key: ValueKey<String>('editable-photo-${photo.id}'),
+                    photo: photo,
+                    imageProvider: imageProviderBuilder(photo.url),
+                    busy: state.photoTargetId == photo.id && busy,
+                    controlsEnabled: !busy,
+                    onDelete: () => onDelete(photo),
+                    onSetPrimary: photo.isAvatar
+                        ? null
+                        : () => onSetPrimary(photo.id),
+                  );
+                }
+                return SizedBox(
+                  width: tileWidth,
+                  height: tileHeight,
+                  child: tile,
+                );
+              }),
             );
           },
         ),

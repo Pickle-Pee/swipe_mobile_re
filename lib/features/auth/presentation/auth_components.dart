@@ -15,6 +15,7 @@ class AuthScaffold extends StatelessWidget {
     required this.child,
     this.onBack,
     this.stepLabel,
+    this.fillBody = false,
   });
 
   final String title;
@@ -22,59 +23,80 @@ class AuthScaffold extends StatelessWidget {
   final Widget child;
   final VoidCallback? onBack;
   final String? stepLabel;
+  final bool fillBody;
 
   @override
   Widget build(BuildContext context) {
+    final topBar = AuthTopBar(
+      title: 'Swipe',
+      onBack: onBack,
+      stepLabel: stepLabel,
+    );
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: AppTokens.space8),
+        Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: AppTokens.space24),
+        Expanded(child: child),
+      ],
+    );
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: AppGradientScaffold(
-        child: CustomScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTokens.space16,
-                AppTokens.space12,
-                AppTokens.space16,
-                0,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: AuthTopBar(
-                  title: 'Swipe',
-                  onBack: onBack,
-                  stepLabel: stepLabel,
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTokens.space20,
-                AppTokens.space32,
-                AppTokens.space20,
-                AppTokens.space24,
-              ),
-              sliver: SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineLarge,
+        child: fillBody
+            ? Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.space16,
+                      AppTokens.space12,
+                      AppTokens.space16,
+                      0,
                     ),
-                    const SizedBox(height: AppTokens.space8),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyLarge,
+                    child: topBar,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTokens.space20,
+                        AppTokens.space32,
+                        AppTokens.space20,
+                        AppTokens.space24,
+                      ),
+                      child: content,
                     ),
-                    const SizedBox(height: AppTokens.space24),
-                    Expanded(child: child),
-                  ],
-                ),
+                  ),
+                ],
+              )
+            : CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.space16,
+                      AppTokens.space12,
+                      AppTokens.space16,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(child: topBar),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.space20,
+                      AppTokens.space32,
+                      AppTokens.space20,
+                      AppTokens.space24,
+                    ),
+                    sliver: SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: content,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -64,6 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         title: 'Preparing your profile',
         subtitle: 'Loading the latest saved details before you continue.',
         stepLabel: 'Profile',
+        fillBody: true,
         child: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -76,6 +77,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         title: 'Profile setup',
         subtitle: 'Your saved profile is safe. Retry when you are ready.',
         stepLabel: 'Profile',
+        fillBody: true,
         child: OnboardingErrorView(
           message: _messageFor(state.error),
           onRetry: () =>
@@ -90,6 +92,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       title: _titleFor(state.step),
       subtitle: _subtitleFor(state.step),
       stepLabel: '$stepNumber of ${OnboardingStep.values.length}',
+      fillBody: true,
       onBack: state.step == OnboardingStep.basic || busy
           ? null
           : () => ref.read(onboardingControllerProvider.notifier).goBack(),

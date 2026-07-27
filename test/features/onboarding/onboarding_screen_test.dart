@@ -52,6 +52,30 @@ void main() {
     expect(find.byType(SingleChildScrollView), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('interests continue renders the optional photos step', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(411, 914);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpOnboarding(tester, _InterestsRepository());
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Choose your interests'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('edit-interest-1')));
+    await tester.tap(find.byKey(const Key('onboarding-continue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add your best photos'), findsOneWidget);
+    expect(find.byKey(const Key('profile-photo-manager')), findsOneWidget);
+    expect(find.byKey(const Key('add-profile-photo')), findsOneWidget);
+    expect(find.text('Skip for now'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpOnboarding(
@@ -121,4 +145,39 @@ class _ScreenRepository implements ProfileRepository {
 
   @override
   Future<UserProfile> setAvatar(int photoId) async => profile;
+}
+
+class _InterestsRepository extends _ScreenRepository {
+  @override
+  final profile = UserProfile(
+    id: 4,
+    firstName: 'Mila',
+    lastName: 'Stone',
+    dateOfBirth: DateTime(1994, 5, 4),
+    gender: 'female',
+    city: 'Lisbon',
+    aboutMe: '',
+    status: '',
+    isSubscription: false,
+    attributes: const ProfileAttributes(whatLookingFor: 'Serious relationship'),
+    interests: const [],
+    photos: const [],
+  );
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) async =>
+      UserProfile(
+        id: profile.id,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        dateOfBirth: profile.dateOfBirth,
+        gender: profile.gender,
+        city: profile.city,
+        aboutMe: profile.aboutMe,
+        status: profile.status,
+        isSubscription: profile.isSubscription,
+        attributes: profile.attributes,
+        interests: const [ProfileInterest(id: 1, label: 'Cinema')],
+        photos: const [],
+      );
 }
