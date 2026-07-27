@@ -604,7 +604,7 @@ class _OwnPhotoStrip extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: photos.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppTokens.space8),
+        separatorBuilder: (_, _) => const SizedBox(width: AppTokens.space8),
         itemBuilder: (context, index) {
           final photo = photos[index];
           return Semantics(
@@ -700,7 +700,7 @@ class _OwnProfileImage extends StatelessWidget {
         if (wasSynchronouslyLoaded || frame != null) return child;
         return const SkeletonLoader(radius: 0);
       },
-      errorBuilder: (_, __, ___) =>
+      errorBuilder: (_, _, _) =>
           ProfileMediaPlaceholder(semanticLabel: semanticLabel),
     );
   }

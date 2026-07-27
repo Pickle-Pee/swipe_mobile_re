@@ -169,6 +169,7 @@ const _incomplete = UserProfile(
   firstName: 'Noor',
   lastName: '',
   dateOfBirth: null,
+  gender: '',
   city: 'Helsinki',
   aboutMe: '',
   status: '',

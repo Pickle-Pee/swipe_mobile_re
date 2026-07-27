@@ -75,6 +75,10 @@ class _AppInformationScreenState extends ConsumerState<AppInformationScreen> {
         final info = state.packageInfo!;
         return SettingsSection(
           title: 'Installed application',
+          footer: const Text(
+            'Legal and support links are not configured in the current '
+            'application contract.',
+          ),
           children: [
             SettingsTile(
               key: const Key('app-information-name'),
@@ -95,10 +99,6 @@ class _AppInformationScreenState extends ConsumerState<AppInformationScreen> {
               statusLabel: info.buildNumber,
             ),
           ],
-          footer: const Text(
-            'Legal and support links are not configured in the current '
-            'application contract.',
-          ),
         );
     }
   }

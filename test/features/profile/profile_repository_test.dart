@@ -37,10 +37,7 @@ void main() {
                 },
               )
               .toList(),
-          'attributes': {
-            if (currentLookingFor != null)
-              'what_looking_for': currentLookingFor,
-          },
+          'attributes': {'what_looking_for': ?currentLookingFor},
         });
       }
       if (options.path == '/user/user/photos') {

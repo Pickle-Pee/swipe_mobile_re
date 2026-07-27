@@ -69,9 +69,22 @@ void main() {
       router: router,
       subscriptionController: _InactiveAccessController.new,
     );
-    await tester.ensureVisible(find.byKey(const Key('settings-logout')));
-    await tester.tap(find.byKey(const Key('settings-logout')));
+    final logout = find.byKey(const Key('settings-logout'));
+    await tester.scrollUntilVisible(
+      logout,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(
+      find.byKey(const Key('settings-list')),
+      const Offset(0, -120),
+    );
     await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: logout, matching: find.byType(InkWell)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Sign out of Swipe?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('cancel-settings-logout')));
@@ -120,7 +133,10 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('settings-logout')),
       220,
-      scrollable: find.byKey(const Key('settings-list')),
+      scrollable: find.descendant(
+        of: find.byKey(const Key('settings-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
 
     expect(find.byKey(const Key('settings-logout')), findsOneWidget);

@@ -14,8 +14,8 @@ import 'package:swipe_mobile_re/shared/theme/tokens.dart';
 import 'package:swipe_mobile_re/shared/ui/app_theme.dart';
 import 'package:swipe_mobile_re/shared/ui/liquid_ui.dart';
 
-const _baselineDeferred =
-    'Baseline capture is deferred until the requested full redesign test pass.';
+// DES-08 is the full redesign verification pass, so these baselines are active.
+const _baselineDeferred = false;
 
 void main() {
   testWidgets('Splash golden', (tester) async {

@@ -547,7 +547,7 @@ class _EditablePhotoImage extends StatelessWidget {
     return Image(
       image: ResizeImage.resizeIfNeeded(decodeWidth, null, provider),
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const ProfileMediaPlaceholder(),
+      errorBuilder: (_, _, _) => const ProfileMediaPlaceholder(),
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded || frame != null) return child;
         return const SkeletonLoader(radius: 0);

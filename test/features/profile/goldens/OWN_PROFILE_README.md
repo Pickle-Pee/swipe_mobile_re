@@ -9,12 +9,20 @@
 - edit saving state;
 - saved public-profile preview.
 
-The test cases are intentionally skipped until the user-requested full redesign
-verification pass. No renderer or test command was run during DES-05. At that
-checkpoint, remove the shared `skip`, run the existing Flutter golden update
-workflow, inspect every generated PNG, and then commit the reviewed baselines.
+The six declared baselines were captured and visually reviewed during the
+DES-08 full redesign verification pass on 2026-07-27. The shared test flag is
+`false`, so the cases run in the normal `flutter test` gate.
 
-Additional baselines to capture during that pass: missing photo, active
-subscription, validation errors, photo upload progress/error, and unsaved
-changes dialog. A reorder baseline remains blocked until backend-persisted
-photo order exists.
+`own_profile_incomplete.png` covers missing media and
+`own_profile_complete.png` covers the active-subscription profile state.
+Validation, upload progress/error, and unsaved-change behavior remain covered
+by widget/controller tests rather than duplicate snapshots. A reorder baseline
+remains blocked until backend-persisted photo order exists.
+
+To intentionally refresh the snapshots:
+
+```powershell
+flutter test --update-goldens test/features/profile/own_profile_golden_test.dart
+```
+
+Inspect every changed PNG before committing it.

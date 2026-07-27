@@ -108,6 +108,7 @@ const _profile = UserProfile(
   firstName: 'Mila',
   lastName: '',
   dateOfBirth: null,
+  gender: 'female',
   city: 'Lisbon',
   aboutMe: '',
   status: '',

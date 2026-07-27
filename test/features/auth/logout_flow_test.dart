@@ -47,20 +47,39 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('settings-logout')));
-    await tester.tap(find.byKey(const Key('settings-logout')));
+    final logout = find.byKey(const Key('settings-logout'));
+    await tester.scrollUntilVisible(
+      logout,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(
+      find.byKey(const Key('settings-list')),
+      const Offset(0, -120),
+    );
     await tester.pumpAndSettle();
+    final logoutAction = find.descendant(
+      of: logout,
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(logoutAction);
+    await tester.tap(logoutAction, warnIfMissed: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(repository.logoutCalls, 0);
     expect(find.text('Sign out of Swipe?'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('confirm-settings-logout')));
-    await tester.tap(find.byKey(const Key('confirm-settings-logout')));
+    await tester.tap(
+      find.byKey(const Key('confirm-settings-logout')),
+      warnIfMissed: false,
+    );
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(repository.logoutCalls, 1);
 
     repository.logoutCompleter.complete();
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(router.state.uri.path, '/welcome');
     expect(find.text('Signed out'), findsOneWidget);

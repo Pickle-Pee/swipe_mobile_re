@@ -5,7 +5,6 @@ import '../../../shared/ui/midnight_components.dart';
 import '../../profile/application/profile_providers.dart';
 import '../../profile/domain/profile_models.dart';
 import '../../profile/presentation/edit_profile_components.dart';
-import '../domain/onboarding_models.dart';
 
 class OnboardingProgress extends StatelessWidget {
   const OnboardingProgress({

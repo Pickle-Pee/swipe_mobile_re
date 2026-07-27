@@ -184,6 +184,14 @@ class _DiscoveryPreferencesScreenState
         return SettingsSection(
           key: const Key('preferences-catalog-error'),
           title: 'Profile preferences',
+          footer: TextButton(
+            onPressed: () => unawaited(
+              ref
+                  .read(discoveryPreferencesControllerProvider.notifier)
+                  .ensureCatalogLoaded(),
+            ),
+            child: const Text('Retry preference choices'),
+          ),
           children: const [
             Padding(
               padding: EdgeInsets.all(AppTokens.space16),
@@ -195,14 +203,6 @@ class _DiscoveryPreferencesScreenState
               ),
             ),
           ],
-          footer: TextButton(
-            onPressed: () => unawaited(
-              ref
-                  .read(discoveryPreferencesControllerProvider.notifier)
-                  .ensureCatalogLoaded(),
-            ),
-            child: const Text('Retry preference choices'),
-          ),
         );
       case PreferencesCatalogStatus.ready:
         final groups = <Widget>[];
@@ -232,11 +232,11 @@ class _DiscoveryPreferencesScreenState
         return SettingsSection(
           key: const Key('preferences-option-groups'),
           title: 'Profile preferences',
-          children: groups,
           footer: const Text(
             'Any omits that query parameter. Selected labels are the canonical '
             'values from the backend catalog.',
           ),
+          children: groups,
         );
     }
   }

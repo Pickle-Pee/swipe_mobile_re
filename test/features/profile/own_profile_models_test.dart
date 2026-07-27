@@ -64,6 +64,7 @@ const _empty = UserProfile(
   firstName: 'Mila',
   lastName: '',
   dateOfBirth: null,
+  gender: '',
   city: '',
   aboutMe: '',
   status: 'online',

@@ -53,8 +53,21 @@ void main() {
 
     await tester.enterText(_ageInput('minimum-age-field'), '24');
     await tester.enterText(_ageInput('maximum-age-field'), '36');
-    await tester.ensureVisible(find.text('Serious relationship'));
-    await tester.tap(find.text('Serious relationship'));
+    final option = find.byKey(
+      const ValueKey<String>(
+        'preference-what_looking_for-SERIOUS_RELATIONSHIP',
+      ),
+    );
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const Key('discovery-preferences-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(option, 180, scrollable: scrollable);
+    await tester.drag(scrollable, const Offset(0, -120));
+    await tester.pump();
+    await tester.tap(option);
     await tester.pump();
     await tester.tap(find.byKey(const Key('save-discovery-preferences')));
     await tester.pumpAndSettle();
@@ -194,6 +207,7 @@ class _CatalogRepository implements ProfileRepository {
     firstName: 'Mila',
     lastName: 'Stone',
     dateOfBirth: null,
+    gender: 'female',
     city: 'Demo City',
     aboutMe: '',
     status: '',

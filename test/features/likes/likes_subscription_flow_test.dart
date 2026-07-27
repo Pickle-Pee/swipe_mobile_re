@@ -396,6 +396,7 @@ const flowCurrentProfile = UserProfile(
   firstName: 'Alex',
   lastName: 'North',
   dateOfBirth: null,
+  gender: 'male',
   city: 'Demo City',
   aboutMe: '',
   status: '',

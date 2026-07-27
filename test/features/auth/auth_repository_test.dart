@@ -179,10 +179,12 @@ void main() {
   test('concurrent unauthorized requests share one refresh', () async {
     await storage.saveTokens('expired-access', 'shared-refresh');
     final refreshResponse = Completer<ResponseBody>();
+    final refreshStarted = Completer<void>();
     var refreshCalls = 0;
     final repository = createRepository((options) async {
       if (options.path == '/auth/refresh_token') {
         refreshCalls++;
+        if (!refreshStarted.isCompleted) refreshStarted.complete();
         return refreshResponse.future;
       }
       if (options.headers['Authorization'] == 'Bearer fresh-access') {
@@ -193,7 +195,7 @@ void main() {
 
     final first = repository.whoAmI();
     final second = repository.whoAmI();
-    await Future<void>.delayed(Duration.zero);
+    await refreshStarted.future.timeout(const Duration(seconds: 1));
     expect(refreshCalls, 1);
 
     refreshResponse.complete(

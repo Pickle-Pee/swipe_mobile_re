@@ -365,7 +365,7 @@ class OnboardingController extends Notifier<OnboardingState> {
 
   OnboardingStep _nextStep(OnboardingStep step) {
     final index = OnboardingStep.values.indexOf(step);
-    final next = (index + 1).clamp(0, OnboardingStep.values.length - 1) as int;
+    final next = (index + 1).clamp(0, OnboardingStep.values.length - 1);
     return OnboardingStep.values[next];
   }
 }

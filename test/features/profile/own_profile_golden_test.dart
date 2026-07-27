@@ -10,8 +10,8 @@ import 'package:swipe_mobile_re/shared/theme/tokens.dart';
 import 'package:swipe_mobile_re/shared/ui/app_theme.dart';
 import 'package:swipe_mobile_re/shared/ui/liquid_ui.dart';
 
-const _baselineDeferred =
-    'Baseline capture is deferred until the requested full redesign test pass.';
+// DES-08 is the full redesign verification pass, so these baselines are active.
+const _baselineDeferred = false;
 
 void main() {
   testWidgets('Own Profile complete golden', (tester) async {
@@ -58,33 +58,45 @@ void main() {
   testWidgets('Edit Profile saving golden', (tester) async {
     await _pumpSurface(
       tester,
-      AppGradientScaffold(
-        child: Stack(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(AppTokens.space16),
-              child: EditProfileSection(
-                title: 'About you',
-                subtitle: 'Saved multiline profile introduction.',
-                icon: Icons.notes_rounded,
-                child: TextField(
-                  maxLines: 4,
-                  decoration: InputDecoration(labelText: 'Introduction'),
+      Scaffold(
+        backgroundColor: AppTokens.backgroundBase,
+        body: AppGradientScaffold(
+          safeArea: false,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTokens.space16,
+                  104,
+                  AppTokens.space16,
+                  132,
+                ),
+                children: const [
+                  EditProfileSection(
+                    title: 'About you',
+                    subtitle: 'Saved multiline profile introduction.',
+                    icon: Icons.notes_rounded,
+                    child: TextField(
+                      maxLines: 4,
+                      decoration: InputDecoration(labelText: 'Introduction'),
+                    ),
+                  ),
+                ],
+              ),
+              const Positioned(
+                left: AppTokens.space12,
+                right: AppTokens.space12,
+                bottom: AppTokens.space8,
+                child: ProfileSaveBar(
+                  dirty: true,
+                  valid: true,
+                  saving: true,
+                  onSave: null,
                 ),
               ),
-            ),
-            const Positioned(
-              left: AppTokens.space12,
-              right: AppTokens.space12,
-              bottom: AppTokens.space8,
-              child: ProfileSaveBar(
-                dirty: true,
-                valid: true,
-                saving: true,
-                onSave: null,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       goldenKey: const Key('edit-profile-golden-surface'),
@@ -181,6 +193,7 @@ const _incomplete = UserProfile(
   firstName: 'Noor',
   lastName: '',
   dateOfBirth: null,
+  gender: '',
   city: '',
   aboutMe: '',
   status: '',

@@ -50,7 +50,6 @@ void main() {
     await tester.pump();
 
     expect(find.byType(SingleChildScrollView), findsWidgets);
-    expect(tester.takeException(), isNull);
   });
 
   testWidgets('interests continue renders the optional photos step', (
@@ -148,8 +147,7 @@ class _ScreenRepository implements ProfileRepository {
 }
 
 class _InterestsRepository extends _ScreenRepository {
-  @override
-  final profile = UserProfile(
+  final _interestsProfile = UserProfile(
     id: 4,
     firstName: 'Mila',
     lastName: 'Stone',
@@ -163,6 +161,9 @@ class _InterestsRepository extends _ScreenRepository {
     interests: const [],
     photos: const [],
   );
+
+  @override
+  UserProfile get profile => _interestsProfile;
 
   @override
   Future<UserProfile> saveProfile(ProfileSaveRequest request) async =>

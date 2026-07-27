@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:swipe_mobile_re/features/profile/application/profile_providers.dart';
 import 'package:swipe_mobile_re/features/profile/domain/profile_models.dart';
 import 'package:swipe_mobile_re/features/profile/domain/profile_repository.dart';
@@ -90,11 +91,14 @@ void main() {
     await _pump(tester, container);
 
     final delete = find.byKey(const ValueKey<String>('delete-photo-2'));
-    await tester.scrollUntilVisible(
-      delete,
-      500,
-      scrollable: find.byType(Scrollable).first,
-    );
+    final editScrollable = find
+        .descendant(
+          of: find.byKey(const Key('edit-profile-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(delete, 500, scrollable: editScrollable);
+    await tester.pumpAndSettle();
     await tester.tap(delete);
     await tester.pump();
     expect(
@@ -115,13 +119,23 @@ Future<void> _pump(WidgetTester tester, ProviderContainer container) async {
   tester.view.physicalSize = const Size(390, 844);
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
+  final router = GoRouter(
+    initialLocation: '/profile/edit',
+    routes: [
+      GoRoute(
+        path: '/profile/edit',
+        builder: (_, _) => const EditProfileScreen(),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
+      child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.midnight(),
-        home: const EditProfileScreen(),
+        routerConfig: router,
       ),
     ),
   );

@@ -1,5 +1,3 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,13 +30,20 @@ class AuthScaffold extends StatelessWidget {
       onBack: onBack,
       stepLabel: stepLabel,
     );
-    final content = Column(
+    final header = Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: AppTokens.space8),
         Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: AppTokens.space24),
+      ],
+    );
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
         Expanded(child: child),
       ],
     );
@@ -65,7 +70,28 @@ class AuthScaffold extends StatelessWidget {
                         AppTokens.space20,
                         AppTokens.space24,
                       ),
-                      child: content,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          const minimumBodyHeight = 144.0;
+                          final maximumHeaderHeight =
+                              (constraints.maxHeight - minimumBodyHeight).clamp(
+                                0.0,
+                                constraints.maxHeight,
+                              );
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: maximumHeaderHeight,
+                                ),
+                                child: SingleChildScrollView(child: header),
+                              ),
+                              Expanded(child: child),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],

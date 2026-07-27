@@ -15,8 +15,14 @@ for:
 - Review/completion;
 - offline bootstrap and onboarding.
 
-The cases are intentionally skipped until the user-requested full redesign
-verification pass. No renderer, Flutter test, analyzer, build, or emulator
-command was run during DES-06. At the final pass, remove the shared skip, update
-goldens with the repository's normal workflow, inspect every PNG, and commit
-only reviewed baselines.
+The 17 baselines were captured and visually reviewed during the DES-08 full
+redesign verification pass on 2026-07-27. The shared test flag is `false`, so
+the cases run in the normal `flutter test` gate.
+
+To intentionally refresh them after a reviewed UI change:
+
+```powershell
+flutter test --update-goldens test/features/auth/auth_onboarding_golden_test.dart
+```
+
+Inspect every changed PNG before committing it.
