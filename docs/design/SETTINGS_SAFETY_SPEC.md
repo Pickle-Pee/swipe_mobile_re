@@ -169,6 +169,10 @@ contract and it exposes no category values. The Flutter client also has no
 current OS notification-permission state abstraction. Notifications are
 therefore hidden.
 
+An unused legacy MobX chat store contains a process-memory per-chat boolean,
+but the production Riverpod chat flow neither reads nor persists it. It is not
+a product notification setting and is not revived by DES-07.
+
 There are no backend privacy fields for visibility, presence, distance, read
 receipts, or Discovery participation. Privacy controls are hidden. DES-07 adds
 no optimistic switches and needs no rollback protocol for this absent feature.

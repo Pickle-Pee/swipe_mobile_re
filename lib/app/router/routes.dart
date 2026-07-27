@@ -14,6 +14,10 @@ class Routes {
   static const profilePreview = '/profile/preview';
   static const likes = '/likes';
   static const settings = '/settings';
+  static const accountSettings = '/settings/account';
+  static const discoveryPreferences = '/settings/discovery';
+  static const deleteAccount = '/settings/account/delete';
+  static const appInformation = '/settings/about';
   static const premium = '/premium';
 
   static const loginPhone = '$authPhone?intent=login';

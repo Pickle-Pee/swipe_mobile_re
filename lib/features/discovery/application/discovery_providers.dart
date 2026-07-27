@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/application/auth_providers.dart';
+import '../../settings/application/discovery_preferences_providers.dart';
 import '../domain/discovery_models.dart';
+import '../domain/discovery_preferences.dart';
 import '../domain/discovery_repository.dart';
 
 enum DiscoveryStatus { initial, loading, data, empty, error }
@@ -50,11 +52,13 @@ class DiscoveryController extends Notifier<DiscoveryState> {
   final Set<int> _reactedProfileIds = <int>{};
   int? _activeUserId;
   bool _failedReactionCoordinatesMatch = true;
+  Future<void>? _loadFuture;
 
   DiscoveryRepository get _repository => ref.read(discoveryRepositoryProvider);
 
   @override
   DiscoveryState build() {
+    _loadFuture = null;
     final userId = ref.watch(
       authControllerProvider.select((auth) => auth.user?.id),
     );
@@ -65,15 +69,45 @@ class DiscoveryController extends Notifier<DiscoveryState> {
     return const DiscoveryState();
   }
 
-  Future<void> load() async {
+  Future<void> load({bool refresh = false}) async {
+    final running = _loadFuture;
+    if (running != null) {
+      await running;
+      if (!refresh) return;
+    }
+
+    late final Future<void> tracked;
+    tracked = _performLoad(clearProfiles: refresh).whenComplete(() {
+      if (identical(_loadFuture, tracked)) _loadFuture = null;
+    });
+    _loadFuture = tracked;
+    await tracked;
+  }
+
+  Future<void> _performLoad({required bool clearProfiles}) async {
     final activeUserId = _activeUserId;
     state = DiscoveryState(
       status: DiscoveryStatus.loading,
-      profiles: state.profiles,
-      emptyReason: state.emptyReason,
+      profiles: clearProfiles ? const [] : state.profiles,
+      emptyReason: clearProfiles ? null : state.emptyReason,
     );
     try {
-      final fetchedProfiles = await _repository.getProfiles();
+      var preferences = DiscoveryPreferences.empty;
+      if (activeUserId != null) {
+        await ref
+            .read(discoveryPreferencesControllerProvider.notifier)
+            .ensureStoredPreferencesLoaded();
+        if (_activeUserId != activeUserId) return;
+        final preferenceState = ref.read(
+          discoveryPreferencesControllerProvider,
+        );
+        if (preferenceState.loadStatus != PreferencesLoadStatus.ready) {
+          throw preferenceState.loadError ??
+              StateError('Discovery preferences are unavailable');
+        }
+        preferences = preferenceState.saved;
+      }
+      final fetchedProfiles = await _repository.getProfiles(preferences);
       if (_activeUserId != activeUserId) return;
       final profiles = fetchedProfiles
           .where((profile) => !_reactedProfileIds.contains(profile.id))

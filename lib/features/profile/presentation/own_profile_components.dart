@@ -522,7 +522,7 @@ class _SettingsEntry extends StatelessWidget {
     icon: Icons.settings_outlined,
     iconColor: AppTokens.textSecondary,
     title: 'Settings',
-    subtitle: 'Safety and app preferences',
+    subtitle: 'Account and discovery preferences',
     trailing: const Icon(Icons.chevron_right_rounded),
     onTap: onTap,
   );

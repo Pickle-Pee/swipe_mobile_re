@@ -19,6 +19,10 @@ import '../../features/profile/edit_profile_screen.dart';
 import '../../features/profile/domain/profile_models.dart';
 import '../../features/profile/own_profile_preview_screen.dart';
 import '../../features/profile/public_profile_screen.dart';
+import '../../features/settings/account_settings_screen.dart';
+import '../../features/settings/app_information_screen.dart';
+import '../../features/settings/delete_account_screen.dart';
+import '../../features/settings/discovery_preferences_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/subscription/subscription_screen.dart';
 import '../shell/main_shell.dart';
@@ -207,6 +211,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.settings,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: Routes.accountSettings,
+        builder: (context, state) => const AccountSettingsScreen(),
+      ),
+      GoRoute(
+        path: Routes.discoveryPreferences,
+        builder: (context, state) => const DiscoveryPreferencesScreen(),
+      ),
+      GoRoute(
+        path: Routes.deleteAccount,
+        builder: (context, state) => const DeleteAccountScreen(),
+      ),
+      GoRoute(
+        path: Routes.appInformation,
+        builder: (context, state) => const AppInformationScreen(),
       ),
       GoRoute(
         path: Routes.premium,

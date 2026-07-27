@@ -1,8 +1,9 @@
 import '../../../core/network/api_client.dart';
 import 'discovery_models.dart';
+import 'discovery_preferences.dart';
 
 abstract interface class DiscoveryRepository {
-  Future<List<DiscoveryProfile>> getProfiles();
+  Future<List<DiscoveryProfile>> getProfiles(DiscoveryPreferences preferences);
   Future<DiscoveryReactionResult> react(
     int profileId,
     DiscoveryReaction reaction,
@@ -14,8 +15,13 @@ class DioDiscoveryRepository implements DiscoveryRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async {
-    final response = await _apiClient.get<List<dynamic>>('/match/find_matches');
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async {
+    final response = await _apiClient.get<List<dynamic>>(
+      '/match/find_matches',
+      queryParameters: preferences.toQueryParameters(),
+    );
     final matches = response.data ?? const [];
     return Future.wait(
       matches.whereType<Map<String, dynamic>>().map((match) async {
