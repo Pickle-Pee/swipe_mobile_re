@@ -25,6 +25,7 @@ class _AppState extends ConsumerState<App> {
   StreamSubscription? _navSub;
   StreamSubscription<String?>? _tokenSub;
   ProviderSubscription<AuthState>? _authSub;
+  var _hadAuthenticatedSession = false;
 
   @override
   void initState() {
@@ -48,15 +49,20 @@ class _AppState extends ConsumerState<App> {
         ref.read(authControllerProvider.notifier).sessionInvalidated();
       }
     });
-    _authSub = ref.listenManual<AuthState>(authControllerProvider, (
-      previous,
-      next,
-    ) {
+    _hadAuthenticatedSession = ref.read(authControllerProvider).isAuthenticated;
+    _authSub = ref.listenManual<AuthState>(authControllerProvider, (_, next) {
+      if (next.isAuthenticated) {
+        _hadAuthenticatedSession = true;
+        return;
+      }
       final endedSession =
-          previous?.isAuthenticated == true &&
+          _hadAuthenticatedSession &&
           (next.status == AuthStatus.signingOut ||
               next.status == AuthStatus.unauthenticated);
-      if (endedSession) _clearPrivateState();
+      if (endedSession) {
+        _hadAuthenticatedSession = false;
+        _clearPrivateState();
+      }
     });
   }
 
