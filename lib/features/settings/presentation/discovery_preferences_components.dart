@@ -11,6 +11,7 @@ class AgeRangeControl extends StatelessWidget {
     super.key,
     required this.minimumController,
     required this.maximumController,
+    required this.hasExplicitRange,
     required this.onMinimumChanged,
     required this.onMaximumChanged,
     required this.onUseAutomatic,
@@ -20,6 +21,7 @@ class AgeRangeControl extends StatelessWidget {
 
   final TextEditingController minimumController;
   final TextEditingController maximumController;
+  final bool hasExplicitRange;
   final ValueChanged<String> onMinimumChanged;
   final ValueChanged<String> onMaximumChanged;
   final VoidCallback onUseAutomatic;
@@ -28,9 +30,6 @@ class AgeRangeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasExplicitRange =
-        minimumController.text.trim().isNotEmpty ||
-        maximumController.text.trim().isNotEmpty;
     return Container(
       key: const Key('age-range-control'),
       padding: const EdgeInsets.all(AppTokens.space20),

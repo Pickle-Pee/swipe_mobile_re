@@ -139,6 +139,9 @@ class _DiscoveryPreferencesScreenState
         AgeRangeControl(
           minimumController: _minimumAge,
           maximumController: _maximumAge,
+          hasExplicitRange:
+              state.draft.minAge.trim().isNotEmpty ||
+              state.draft.maxAge.trim().isNotEmpty,
           onMinimumChanged: ref
               .read(discoveryPreferencesControllerProvider.notifier)
               .updateMinimumAge,

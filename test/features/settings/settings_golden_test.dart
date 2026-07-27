@@ -92,6 +92,7 @@ void main() {
             AgeRangeControl(
               minimumController: minimum,
               maximumController: maximum,
+              hasExplicitRange: true,
               onMinimumChanged: _ignoreString,
               onMaximumChanged: _ignoreString,
               onUseAutomatic: _noop,

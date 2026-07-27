@@ -24,7 +24,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(deleteAccountControllerProvider.notifier).reset();
+    Future.microtask(ref.read(deleteAccountControllerProvider.notifier).reset);
   }
 
   @override
