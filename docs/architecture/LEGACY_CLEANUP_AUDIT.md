@@ -211,5 +211,48 @@ DES-08 применил все решения REMOVE/MIGRATE из этого а�
 - 31 отложенный DES-05/06/07 golden baseline создан, визуально просмотрен и
   включён в обычный test gate.
 
-Итоговый build/profile/manual status дополняется после release gate; canonical
-структура закреплена в `CANONICAL_UI_ARCHITECTURE.md`.
+Финальный verification gate:
+
+- `flutter clean` — успешно;
+- обычный `flutter pub get` остановлен после пяти минут ожидания advisory-запроса
+  к `pub.dev`; `flutter pub get --offline` успешно восстановил зависимости из
+  lock-файла, изменений lock-файла нет;
+- `dart format --output=none --set-exit-if-changed .` — 145 файлов, изменений
+  форматирования нет;
+- `flutter analyze` — `No issues found`;
+- `flutter test` — 310 тестов успешно;
+- `flutter build apk --debug` — создан `app-debug.apk`;
+- `flutter build apk --profile --no-pub` и
+  `flutter run --profile --no-pub --no-resident -d emulator-5554` — успешно
+  после передачи Gradle локального VPN-прокси; profile APK установлен и запущен
+  на Pixel API 36;
+- в profile mode вручную проверены восстановление существующей demo-сессии,
+  Discovery, public profile, Like и переход к следующей карточке, пустые
+  Chats/Likes states, own profile, public preview, edit profile, Settings,
+  Account, Discovery preferences, Subscription, App information и открытие с
+  возвратом из системного image picker. Ошибок Flutter, overflow и сломанной
+  навигации не обнаружено.
+
+Live-проверка Registration/Onboarding, Match/Chat/pagination, Block/Report,
+Logout/Login, принудительного refresh token, offline startup, chat reconnect и
+delete-account error не повторялась на установленной сессии: у активного
+demo-пользователя не было match/chat, а после проверки image picker среда
+остановила дальнейшие ADB-команды. Эти ветки остаются покрытыми действующими
+widget/unit/transport/router тестами, но для полного end-to-end приёмочного
+прохода требуется отдельный ручной прогон с подготовленными demo-данными.
+
+Статистика DES-08 относительно `5e80dd7`:
+
+- 110 файлов затронуто: 33 добавлено, 31 удалён, 46 изменено;
+- 5 498 строк удалено, 819 добавлено;
+- удалено 30 Dart-файлов, 1 shader asset, 1 dependency (`mobx`);
+- удалено 8 неиспользуемых shared UI-компонентов, legacy event bridge,
+  дублирующий token storage и недостижимые MobX/controllers/HTTP/socket
+  реализации;
+- зарегистрированных production routes не удалено: строковые chat-дубли
+  мигрированы на canonical `Routes`, недостижимые альтернативные экраны и
+  переходы удалены вместе с legacy-подграфом.
+
+Canonical структура закреплена в `CANONICAL_UI_ARCHITECTURE.md`. Единственный
+REVIEW вне cleanup scope — отсутствующие продуктовые legal/privacy/blocked
+routes и content; создавать для них фиктивный UI в DES-08 запрещено.
