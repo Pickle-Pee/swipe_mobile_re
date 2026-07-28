@@ -329,24 +329,6 @@ class InterestChip extends StatelessWidget {
   }
 }
 
-class VerifiedBadge extends StatelessWidget {
-  const VerifiedBadge({super.key, this.label = 'Verified'});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: label,
-      child: const Icon(
-        Icons.verified_rounded,
-        size: AppTokens.iconStandard,
-        color: AppTokens.success,
-      ),
-    );
-  }
-}
-
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,

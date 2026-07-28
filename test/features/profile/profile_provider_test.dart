@@ -29,10 +29,22 @@ void main() {
 
 class FailingProfileRepository implements ProfileRepository {
   @override
+  Future<UserProfile> deletePhoto(int photoId, {bool wasAvatar = false}) =>
+      Future.error(Exception('offline'));
+
+  @override
+  Future<ProfileEditCatalog> getEditCatalog() =>
+      Future.error(Exception('offline'));
+
+  @override
   Future<UserProfile> getCurrentProfile() => Future.error(Exception('offline'));
 
   @override
   Future<UserProfile> setAvatar(int photoId) =>
+      Future.error(Exception('offline'));
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) =>
       Future.error(Exception('offline'));
 
   @override

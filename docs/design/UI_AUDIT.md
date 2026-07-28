@@ -1,5 +1,12 @@
 # Discovery UI audit
 
+# Discovery UI audit (historical DES-01 input)
+
+> This document records the pre-redesign state inspected on 22 July 2026.
+> DES-08 removed the shader, animated compatibility background, legacy wrapper,
+> and architectural duplicates. The current source of truth is
+> `docs/architecture/CANONICAL_UI_ARCHITECTURE.md`.
+
 Audit date: 22 July 2026
 
 Branch: `codex/design-midnight-aura-discovery`
@@ -15,9 +22,9 @@ backend fields consumed by that flow. Backend code is read-only for DES-01.
   and `docs/BASELINE.md`;
 - application composition: `app.dart`, `app_router.dart`, `routes.dart`, and
   `main_shell.dart`;
-- visual foundation: `tokens.dart`, `app_theme.dart`, `liquid_ui.dart`,
-  `glass_tabbar.dart`, `animated_liquid_background.dart`, and
-  `shader_liquid_layer.dart`;
+- visual foundation at audit time: `tokens.dart`, `app_theme.dart`,
+  `liquid_ui.dart`, `glass_tabbar.dart`, `animated_liquid_background.dart`, and
+  `shader_liquid_layer.dart` (the last two were removed in DES-08);
 - Discovery: screen, Riverpod controller, domain models, Dio repository, and
   provider/repository tests;
 - adjacent UI state: profile, likes, and chat screens, models, repositories,
@@ -103,8 +110,8 @@ There is no subscription restriction in the current Discovery controller.
 - Every `GlassSurface`, including surfaces in scrolling production screens,
   incurs backdrop blur. There is no on-screen blur budget.
 - The media card has no explicit repaint isolation.
-- The shader alternative also ticks and repaints continuously and is not needed
-  for the Discovery result.
+- The shader alternative also ticked and repainted continuously; DES-08 removed
+  both its Dart consumer and `assets/shaders/liquid.frag`.
 
 ## Accessibility problems
 
@@ -137,7 +144,7 @@ Replace or extend for DES-01:
 - replace white defaults with semantic dark tokens and three explicit glass
   levels;
 - replace `GlassTabBar` in the shell with one floating
-  `GlassNavigationBar`, while retaining a compatibility wrapper;
+  `GlassNavigationBar`; DES-08 removed the wrapper after all consumers migrated;
 - split Discovery presentation into media, readability overlay, details sheet,
   action bar, and reusable state components;
 - distinguish Like and Pass progress in UI state without changing repository

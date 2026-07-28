@@ -10,74 +10,115 @@ import '../../profile/application/profile_providers.dart';
 import '../domain/subscription_models.dart';
 import '../domain/subscription_repository.dart';
 
-enum SubscriptionStatus {
-  initial,
-  loading,
-  plansLoaded,
-  empty,
-  creatingCheckout,
+enum SubscriptionPlansStatus { initial, loading, data, empty, error }
+
+enum CheckoutStatus {
+  idle,
+  creating,
+  openingPayment,
+  creationError,
+  launchError,
   awaitingPayment,
-  checkingStatus,
+  verifying,
+  pending,
   confirmed,
   failed,
   cancelled,
   timedOut,
-  error,
+  verificationError,
 }
 
 class SubscriptionState {
   const SubscriptionState({
-    this.status = SubscriptionStatus.initial,
+    this.plansStatus = SubscriptionPlansStatus.initial,
+    this.checkoutStatus = CheckoutStatus.idle,
     this.plans = const [],
     this.selectedPlanId,
-    this.activeSubscription,
     this.checkout,
     this.payment,
-    this.error,
+    this.plansError,
+    this.checkoutError,
     this.pollAttempt = 0,
   });
 
-  final SubscriptionStatus status;
+  final SubscriptionPlansStatus plansStatus;
+  final CheckoutStatus checkoutStatus;
   final List<SubscriptionPlan> plans;
   final int? selectedPlanId;
-  final ActiveSubscription? activeSubscription;
   final CheckoutResponse? checkout;
   final PaymentStatusResponse? payment;
-  final Object? error;
+  final Object? plansError;
+  final Object? checkoutError;
   final int pollAttempt;
 
-  bool get isBusy =>
-      status == SubscriptionStatus.creatingCheckout ||
-      status == SubscriptionStatus.checkingStatus;
-  bool get canCheckout =>
-      selectedPlanId != null &&
-      !isBusy &&
-      status != SubscriptionStatus.awaitingPayment;
+  SubscriptionPlan? get selectedPlan {
+    final selected = selectedPlanId;
+    if (selected == null) return null;
+    for (final plan in plans) {
+      if (plan.id == selected) return plan;
+    }
+    return null;
+  }
+
+  bool get isCheckoutBusy =>
+      checkoutStatus == CheckoutStatus.creating ||
+      checkoutStatus == CheckoutStatus.openingPayment ||
+      checkoutStatus == CheckoutStatus.verifying;
+
+  bool get hasOpenCheckout => const {
+    CheckoutStatus.openingPayment,
+    CheckoutStatus.launchError,
+    CheckoutStatus.awaitingPayment,
+    CheckoutStatus.verifying,
+    CheckoutStatus.pending,
+    CheckoutStatus.timedOut,
+    CheckoutStatus.verificationError,
+  }.contains(checkoutStatus);
+
+  bool get canCreateCheckout =>
+      plansStatus == SubscriptionPlansStatus.data &&
+      selectedPlan?.isActive == true &&
+      !isCheckoutBusy &&
+      !hasOpenCheckout;
+
+  bool get canVerify =>
+      checkout != null &&
+      !isCheckoutBusy &&
+      const {
+        CheckoutStatus.awaitingPayment,
+        CheckoutStatus.pending,
+        CheckoutStatus.timedOut,
+        CheckoutStatus.verificationError,
+      }.contains(checkoutStatus);
 
   SubscriptionState copyWith({
-    SubscriptionStatus? status,
+    SubscriptionPlansStatus? plansStatus,
+    CheckoutStatus? checkoutStatus,
     List<SubscriptionPlan>? plans,
     int? selectedPlanId,
     bool clearSelectedPlan = false,
-    ActiveSubscription? activeSubscription,
-    bool clearActiveSubscription = false,
     CheckoutResponse? checkout,
+    bool clearCheckout = false,
     PaymentStatusResponse? payment,
-    Object? error,
-    bool clearError = false,
+    bool clearPayment = false,
+    Object? plansError,
+    bool clearPlansError = false,
+    Object? checkoutError,
+    bool clearCheckoutError = false,
     int? pollAttempt,
   }) => SubscriptionState(
-    status: status ?? this.status,
+    plansStatus: plansStatus ?? this.plansStatus,
+    checkoutStatus: checkoutStatus ?? this.checkoutStatus,
     plans: plans ?? this.plans,
     selectedPlanId: clearSelectedPlan
         ? null
         : selectedPlanId ?? this.selectedPlanId,
-    activeSubscription: clearActiveSubscription
+    checkout: clearCheckout ? null : checkout ?? this.checkout,
+    payment: clearPayment ? null : payment ?? this.payment,
+    plansError: clearPlansError ? null : plansError ?? this.plansError,
+    checkoutError: clearCheckoutError
         ? null
-        : activeSubscription ?? this.activeSubscription,
-    checkout: checkout ?? this.checkout,
-    payment: payment ?? this.payment,
-    error: clearError ? null : error ?? this.error,
+        : checkoutError ?? this.checkoutError,
     pollAttempt: pollAttempt ?? this.pollAttempt,
   );
 }
@@ -97,6 +138,7 @@ class SubscriptionPollConfig {
     this.interval = const Duration(seconds: 3),
     this.maxAttempts = 5,
   });
+
   final Duration interval;
   final int maxAttempts;
 }
@@ -104,6 +146,86 @@ class SubscriptionPollConfig {
 final subscriptionRepositoryProvider = Provider<SubscriptionRepository>((ref) {
   return DioSubscriptionRepository(ref.watch(apiClientProvider));
 });
+
+enum SubscriptionAccessStatus { initial, loading, inactive, active, error }
+
+class SubscriptionAccessState {
+  const SubscriptionAccessState({
+    this.status = SubscriptionAccessStatus.initial,
+    this.activeSubscription,
+    this.error,
+    this.isRefreshing = false,
+  });
+
+  final SubscriptionAccessStatus status;
+  final ActiveSubscription? activeSubscription;
+  final Object? error;
+  final bool isRefreshing;
+
+  bool get isResolved =>
+      status == SubscriptionAccessStatus.inactive ||
+      status == SubscriptionAccessStatus.active;
+  bool get hasPremiumAccess =>
+      status == SubscriptionAccessStatus.active && activeSubscription != null;
+}
+
+final subscriptionAccessControllerProvider =
+    NotifierProvider<SubscriptionAccessController, SubscriptionAccessState>(
+      SubscriptionAccessController.new,
+    );
+
+class SubscriptionAccessController extends Notifier<SubscriptionAccessState> {
+  SubscriptionRepository get _repository =>
+      ref.read(subscriptionRepositoryProvider);
+
+  @override
+  SubscriptionAccessState build() => const SubscriptionAccessState();
+
+  Future<void> ensureLoaded() async {
+    if (state.status != SubscriptionAccessStatus.initial) return;
+    await refresh();
+  }
+
+  Future<void> refresh() async {
+    final retained = state.isResolved ? state : null;
+    state = retained == null
+        ? const SubscriptionAccessState(
+            status: SubscriptionAccessStatus.loading,
+          )
+        : SubscriptionAccessState(
+            status: retained.status,
+            activeSubscription: retained.activeSubscription,
+            isRefreshing: true,
+          );
+    try {
+      final active = await _repository.getActiveSubscription();
+      state = SubscriptionAccessState(
+        status: active == null
+            ? SubscriptionAccessStatus.inactive
+            : SubscriptionAccessStatus.active,
+        activeSubscription: active,
+      );
+    } on Object catch (error) {
+      state = retained == null
+          ? SubscriptionAccessState(
+              status: SubscriptionAccessStatus.error,
+              error: error,
+            )
+          : SubscriptionAccessState(
+              status: retained.status,
+              activeSubscription: retained.activeSubscription,
+              error: error,
+            );
+    }
+  }
+
+  void updateFromConfirmed(ActiveSubscription active) {
+    state = SubscriptionAccessState(
+      status: SubscriptionAccessStatus.active,
+      activeSubscription: active,
+    );
+  }
+}
 
 final paymentUrlLauncherProvider = Provider<PaymentUrlLauncher>((ref) {
   return ExternalPaymentUrlLauncher();
@@ -136,110 +258,155 @@ class SubscriptionController extends Notifier<SubscriptionState> {
   }
 
   Future<void> load() async {
-    _pollGeneration++;
+    await Future.wait([
+      loadPlans(),
+      ref.read(subscriptionAccessControllerProvider.notifier).refresh(),
+    ]);
+  }
+
+  Future<void> loadPlans() async {
     state = state.copyWith(
-      status: SubscriptionStatus.loading,
-      clearError: true,
+      plansStatus: SubscriptionPlansStatus.loading,
+      clearPlansError: true,
     );
     try {
-      final results = await Future.wait<Object?>([
-        _repository.getPlans(),
-        _repository.getActiveSubscription(),
-      ]);
-      final plans = results[0]! as List<SubscriptionPlan>;
-      final active = results[1] as ActiveSubscription?;
-      state = SubscriptionState(
-        status: plans.isEmpty
-            ? SubscriptionStatus.empty
-            : SubscriptionStatus.plansLoaded,
+      final plans = await _repository.getPlans();
+      final retainedSelection = state.selectedPlanId;
+      final selectionStillValid = plans.any(
+        (plan) => plan.id == retainedSelection && plan.isActive,
+      );
+      final fallback = _firstActivePlan(plans)?.id;
+      state = state.copyWith(
+        plansStatus: plans.isEmpty
+            ? SubscriptionPlansStatus.empty
+            : SubscriptionPlansStatus.data,
         plans: plans,
-        selectedPlanId: plans.isEmpty ? null : plans.first.id,
-        activeSubscription: active,
+        selectedPlanId: selectionStillValid ? retainedSelection : fallback,
+        clearSelectedPlan: !selectionStillValid && fallback == null,
+        clearPlansError: true,
       );
     } on Object catch (error) {
-      state = state.copyWith(status: SubscriptionStatus.error, error: error);
+      state = state.copyWith(
+        plansStatus: SubscriptionPlansStatus.error,
+        plansError: error,
+      );
     }
   }
 
   void selectPlan(int id) {
-    if (state.isBusy || !state.plans.any((plan) => plan.id == id)) {
+    if (state.isCheckoutBusy ||
+        !state.plans.any((plan) => plan.id == id && plan.isActive)) {
       return;
     }
-    state = state.copyWith(selectedPlanId: id, clearError: true);
+    state = state.copyWith(selectedPlanId: id, clearCheckoutError: true);
   }
 
   Future<void> createCheckout() async {
-    final selected = state.selectedPlanId;
-    if (selected == null ||
-        state.isBusy ||
-        state.status == SubscriptionStatus.awaitingPayment) {
-      return;
-    }
+    final selected = state.selectedPlan;
+    if (selected == null || !state.canCreateCheckout) return;
+
     _pollGeneration++;
     state = state.copyWith(
-      status: SubscriptionStatus.creatingCheckout,
-      clearError: true,
+      checkoutStatus: CheckoutStatus.creating,
+      clearCheckout: true,
+      clearPayment: true,
+      clearCheckoutError: true,
       pollAttempt: 0,
     );
     try {
       final checkout = await _repository.createCheckout(
-        selected,
+        selected.id,
         const Uuid().v4(),
       );
       final url = checkout.paymentUrl;
       if (url == null) {
         throw const FormatException('Backend did not return a payment URL');
       }
-      if (!await ref.read(paymentUrlLauncherProvider).open(url)) {
-        throw StateError('Could not open the payment form');
-      }
       state = state.copyWith(
-        status: SubscriptionStatus.awaitingPayment,
+        checkoutStatus: CheckoutStatus.openingPayment,
         checkout: checkout,
       );
-      final generation = ++_pollGeneration;
-      unawaited(_pollPayment(generation));
+      await _openPaymentUrl(url);
     } on Object catch (error) {
-      state = state.copyWith(status: SubscriptionStatus.error, error: error);
+      if (state.checkoutStatus == CheckoutStatus.openingPayment) {
+        state = state.copyWith(
+          checkoutStatus: CheckoutStatus.launchError,
+          checkoutError: error,
+        );
+      } else {
+        state = state.copyWith(
+          checkoutStatus: CheckoutStatus.creationError,
+          checkoutError: error,
+        );
+      }
     }
+  }
+
+  Future<void> reopenPayment() async {
+    final url = state.checkout?.paymentUrl;
+    if (url == null ||
+        state.checkoutStatus != CheckoutStatus.launchError ||
+        state.isCheckoutBusy) {
+      return;
+    }
+    state = state.copyWith(
+      checkoutStatus: CheckoutStatus.openingPayment,
+      clearCheckoutError: true,
+    );
+    try {
+      await _openPaymentUrl(url);
+    } on Object catch (error) {
+      state = state.copyWith(
+        checkoutStatus: CheckoutStatus.launchError,
+        checkoutError: error,
+      );
+    }
+  }
+
+  Future<void> _openPaymentUrl(Uri url) async {
+    if (!await ref.read(paymentUrlLauncherProvider).open(url)) {
+      throw StateError('Could not open the payment form');
+    }
+    state = state.copyWith(
+      checkoutStatus: CheckoutStatus.awaitingPayment,
+      clearCheckoutError: true,
+    );
+    final generation = ++_pollGeneration;
+    unawaited(_pollPayment(generation));
   }
 
   Future<void> checkPaymentStatus() async {
     final orderId = state.checkout?.orderId;
-    if (orderId == null || state.status == SubscriptionStatus.checkingStatus) {
-      return;
-    }
+    if (orderId == null || state.isCheckoutBusy) return;
     await _check(orderId);
   }
 
   Future<void> _pollPayment(int generation) async {
     final config = ref.read(subscriptionPollConfigProvider);
     final orderId = state.checkout?.orderId;
-    if (orderId == null) {
-      return;
-    }
+    if (orderId == null) return;
+    if (config.maxAttempts <= 0) return;
+
     for (var attempt = 1; attempt <= config.maxAttempts; attempt++) {
       await Future<void>.delayed(config.interval);
-      if (generation != _pollGeneration) {
-        return;
-      }
+      if (generation != _pollGeneration) return;
       state = state.copyWith(pollAttempt: attempt);
       final terminal = await _check(orderId);
-      if (terminal || generation != _pollGeneration) {
-        return;
-      }
+      if (terminal || generation != _pollGeneration) return;
     }
     if (generation == _pollGeneration &&
-        state.status == SubscriptionStatus.awaitingPayment) {
-      state = state.copyWith(status: SubscriptionStatus.timedOut);
+        const {
+          CheckoutStatus.awaitingPayment,
+          CheckoutStatus.pending,
+        }.contains(state.checkoutStatus)) {
+      state = state.copyWith(checkoutStatus: CheckoutStatus.timedOut);
     }
   }
 
   Future<bool> _check(String orderId) async {
-    final previous = state.status;
     state = state.copyWith(
-      status: SubscriptionStatus.checkingStatus,
-      clearError: true,
+      checkoutStatus: CheckoutStatus.verifying,
+      clearCheckoutError: true,
     );
     try {
       final payment = await _repository.getPaymentStatus(orderId);
@@ -247,24 +414,32 @@ class SubscriptionController extends Notifier<SubscriptionState> {
         case PaymentStatus.succeeded:
           final active =
               payment.subscription ?? await _repository.getActiveSubscription();
+          if (active == null) {
+            throw StateError(
+              'Payment succeeded but the backend has not activated Premium',
+            );
+          }
           state = state.copyWith(
-            status: SubscriptionStatus.confirmed,
+            checkoutStatus: CheckoutStatus.confirmed,
             payment: payment,
-            activeSubscription: active,
+            clearCheckoutError: true,
           );
+          ref
+              .read(subscriptionAccessControllerProvider.notifier)
+              .updateFromConfirmed(active);
           _pollGeneration++;
           await ref.read(subscriptionProfileRefreshProvider)();
           return true;
         case PaymentStatus.failed:
           state = state.copyWith(
-            status: SubscriptionStatus.failed,
+            checkoutStatus: CheckoutStatus.failed,
             payment: payment,
           );
           _pollGeneration++;
           return true;
         case PaymentStatus.canceled:
           state = state.copyWith(
-            status: SubscriptionStatus.cancelled,
+            checkoutStatus: CheckoutStatus.cancelled,
             payment: payment,
           );
           _pollGeneration++;
@@ -272,7 +447,7 @@ class SubscriptionController extends Notifier<SubscriptionState> {
         case PaymentStatus.refunded:
         case PaymentStatus.partiallyRefunded:
           state = state.copyWith(
-            status: SubscriptionStatus.failed,
+            checkoutStatus: CheckoutStatus.failed,
             payment: payment,
           );
           _pollGeneration++;
@@ -281,49 +456,45 @@ class SubscriptionController extends Notifier<SubscriptionState> {
         case PaymentStatus.requiresAction:
         case PaymentStatus.processing:
           state = state.copyWith(
-            status: SubscriptionStatus.awaitingPayment,
+            checkoutStatus: CheckoutStatus.pending,
             payment: payment,
           );
           return false;
       }
     } on Object catch (error) {
-      state = state.copyWith(status: previous, error: error);
-      return false;
+      state = state.copyWith(
+        checkoutStatus: CheckoutStatus.verificationError,
+        checkoutError: error,
+      );
+      _pollGeneration++;
+      return true;
     }
   }
 
   Future<void> completeDemo({required bool success}) async {
-    if (!AppConfig.isDemoMode || state.checkout == null || state.isBusy) {
+    if (!AppConfig.isDemoMode ||
+        state.checkout == null ||
+        state.isCheckoutBusy) {
       return;
     }
     try {
-      final payment = await _repository.setDemoPaymentResult(
+      await _repository.setDemoPaymentResult(
         state.checkout!.orderId,
         success: success,
       );
-      state = state.copyWith(payment: payment);
       await checkPaymentStatus();
     } on Object catch (error) {
-      state = state.copyWith(status: SubscriptionStatus.error, error: error);
-    }
-  }
-
-  Future<void> cancelRenewal() async {
-    if (state.isBusy || state.activeSubscription == null) {
-      return;
-    }
-    state = state.copyWith(
-      status: SubscriptionStatus.checkingStatus,
-      clearError: true,
-    );
-    try {
-      final active = await _repository.cancelRenewal();
       state = state.copyWith(
-        status: SubscriptionStatus.plansLoaded,
-        activeSubscription: active,
+        checkoutStatus: CheckoutStatus.verificationError,
+        checkoutError: error,
       );
-    } on Object catch (error) {
-      state = state.copyWith(status: SubscriptionStatus.error, error: error);
     }
   }
+}
+
+SubscriptionPlan? _firstActivePlan(List<SubscriptionPlan> plans) {
+  for (final plan in plans) {
+    if (plan.isActive) return plan;
+  }
+  return null;
 }

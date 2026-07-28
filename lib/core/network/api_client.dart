@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../config/config.dart';
-import '../storage/token_storage.dart';
 import 'api_exception.dart';
 import 'api_logger.dart';
 
@@ -14,45 +13,16 @@ abstract interface class ApiTokenStore {
   Future<void> clear();
 }
 
-class SecureApiTokenStore implements ApiTokenStore {
-  SecureApiTokenStore([TokenStorage? storage])
-    : _storage = storage ?? TokenStorage();
-
-  final TokenStorage _storage;
-
-  @override
-  Future<String?> readAccessToken() => _storage.getAccessToken();
-
-  @override
-  Future<String?> readRefreshToken() => _storage.getRefreshToken();
-
-  @override
-  Future<void> saveTokens(String accessToken, String refreshToken) async {
-    final accessResult = await _storage.setAccessToken(accessToken);
-    final refreshResult = await _storage.setRefreshToken(refreshToken);
-    if (accessResult != 0 || refreshResult != 0) {
-      throw StateError('Could not persist refreshed session');
-    }
-  }
-
-  @override
-  Future<void> clear() async {
-    if (await _storage.clearTokens() != 0) {
-      throw StateError('Could not clear session');
-    }
-  }
-}
-
 class ApiClient {
   ApiClient({
     Dio? dio,
-    ApiTokenStore? tokenStore,
+    required ApiTokenStore tokenStore,
     ApiLogSink? logSink,
     this.refreshPath = '/auth/refresh_token',
     Duration connectTimeout = const Duration(seconds: 5),
     Duration sendTimeout = const Duration(seconds: 5),
     Duration receiveTimeout = const Duration(seconds: 10),
-  }) : _tokenStore = tokenStore ?? SecureApiTokenStore(),
+  }) : _tokenStore = tokenStore,
        dio =
            dio ??
            Dio(
@@ -171,7 +141,14 @@ class ApiClient {
       }
       await _tokenStore.saveTokens(accessToken, newRefreshToken);
       return true;
-    } on Object {
+    } on DioException catch (error) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 400 || statusCode == 401 || statusCode == 403) {
+        await _clearSession();
+        return false;
+      }
+      throw _mapException(error);
+    } on FormatException {
       await _clearSession();
       return false;
     }
@@ -191,6 +168,8 @@ class ApiClient {
   }
 
   static ApiException _mapException(DioException error) {
+    final cause = error.error;
+    if (cause is ApiException) return cause;
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
     final message =
@@ -274,8 +253,20 @@ class _AuthInterceptor extends Interceptor {
       return;
     }
 
-    if (!await _client._refreshOnce()) {
-      handler.next(error);
+    try {
+      if (!await _client._refreshOnce()) {
+        handler.next(error);
+        return;
+      }
+    } on ApiException catch (refreshError) {
+      handler.reject(
+        DioException(
+          requestOptions: request,
+          error: refreshError,
+          message: refreshError.message,
+          type: DioExceptionType.unknown,
+        ),
+      );
       return;
     }
 

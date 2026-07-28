@@ -248,8 +248,4 @@ class AppTheme {
       ),
     );
   }
-
-  static ThemeData light() => midnight();
-
-  static ThemeData dark() => midnight();
 }

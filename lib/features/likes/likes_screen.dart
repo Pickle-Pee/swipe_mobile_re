@@ -1,14 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/routes.dart';
-import '../../core/config/config.dart';
-import '../../core/network/api_exception.dart';
-import '../../shared/theme/tokens.dart';
-import '../../shared/ui/liquid_ui.dart';
+import '../discovery/domain/discovery_models.dart';
+import '../subscription/application/subscription_providers.dart';
 import 'application/likes_providers.dart';
 import 'domain/likes_models.dart';
+import 'presentation/likes_components.dart';
 
 class LikesScreen extends ConsumerStatefulWidget {
   const LikesScreen({super.key});
@@ -21,152 +22,59 @@ class _LikesScreenState extends ConsumerState<LikesScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(ref.read(likesControllerProvider.notifier).load);
+    Future.microtask(_ensureLoaded);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(likesControllerProvider);
-    return Scaffold(
-      body: AppGradientScaffold(
-        child: Column(
-          children: [
-            Padding(
-              padding: AppTokens.screenPadding,
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.go(Routes.discover),
-                    icon: const Icon(Icons.chevron_left_rounded),
-                  ),
-                  Text('Likes', style: Theme.of(context).textTheme.titleLarge),
-                ],
-              ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SegmentedButton<LikesCategory>(
-                segments: const [
-                  ButtonSegment(
-                    value: LikesCategory.likedMe,
-                    label: Text('Liked me'),
-                  ),
-                  ButtonSegment(
-                    value: LikesCategory.likedUsers,
-                    label: Text('My likes'),
-                  ),
-                  ButtonSegment(
-                    value: LikesCategory.favorites,
-                    label: Text('Favorites'),
-                  ),
-                  ButtonSegment(
-                    value: LikesCategory.mutual,
-                    label: Text('Matches'),
-                  ),
-                ],
-                selected: {state.category},
-                onSelectionChanged: (selection) => ref
-                    .read(likesControllerProvider.notifier)
-                    .select(selection.first),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(child: _content(state)),
-          ],
-        ),
-      ),
+    final access = ref.watch(subscriptionAccessControllerProvider);
+    return LikesView(
+      state: state,
+      access: access,
+      onBack: () => context.go(Routes.discover),
+      onRetry: () => unawaited(_refresh()),
+      onRefresh: _refresh,
+      onSelectCategory: ref.read(likesControllerProvider.notifier).select,
+      onOpenSubscription: () => unawaited(context.push(Routes.premium)),
+      onOpenDiscovery: () => context.go(Routes.discover),
+      onOpenProfile: _openProfile,
     );
   }
 
-  Widget _content(LikesState state) {
-    if (state.status == LikesStatus.loading && state.data == null) {
-      return const Center(child: CircularProgressIndicator());
+  Future<void> _ensureLoaded() async {
+    final tasks = <Future<void>>[];
+    if (ref.read(likesControllerProvider).status == LikesStatus.initial) {
+      tasks.add(ref.read(likesControllerProvider.notifier).load());
     }
-    if (state.status == LikesStatus.error && state.data == null) {
-      return _LikesMessage(
-        message: _errorMessage(state.error),
-        onRetry: _reload,
-      );
-    }
-    if (state.visible.isEmpty) {
-      return _LikesMessage(message: 'Nothing here yet', onRetry: _reload);
-    }
-    return RefreshIndicator(
-      onRefresh: ref.read(likesControllerProvider.notifier).load,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: state.visible.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (_, index) => _LikesTile(user: state.visible[index]),
-      ),
+    tasks.add(
+      ref.read(subscriptionAccessControllerProvider.notifier).ensureLoaded(),
     );
+    await Future.wait(tasks);
   }
 
-  Future<void> _reload() => ref.read(likesControllerProvider.notifier).load();
+  Future<void> _refresh() => Future.wait([
+    ref.read(likesControllerProvider.notifier).load(),
+    ref.read(subscriptionAccessControllerProvider.notifier).refresh(),
+  ]);
 
-  String _errorMessage(Object? error) => error is ApiException
-      ? error.message
-      : 'Could not load likes. Please try again.';
-}
-
-class _LikesTile extends StatelessWidget {
-  const _LikesTile({required this.user});
-  final LikesUser user;
-
-  @override
-  Widget build(BuildContext context) {
-    final age = user.age;
-    return GlassSurface(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundImage: user.avatarUrl == null
-              ? null
-              : NetworkImage(_mediaUrl(user.avatarUrl!)),
-          child: user.avatarUrl == null ? const Icon(Icons.person) : null,
-        ),
-        title: Text(
-          [user.firstName, if (age != null) '$age'].join(', '),
-          style: const TextStyle(color: Colors.white),
-        ),
-        subtitle: Text(
-          [
-            user.city,
-            user.aboutMe,
-          ].where((value) => value.isNotEmpty).join(' • '),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Icon(
-          user.mutual ? Icons.favorite : Icons.favorite_border,
-          color: AppTokens.pinkSoft,
-        ),
+  void _openProfile(LikesUser user) {
+    unawaited(
+      context.push(
+        Routes.publicProfileFromLikesFor(user.id),
+        extra: _profileSeed(user),
       ),
     );
   }
 }
 
-class _LikesMessage extends StatelessWidget {
-  const _LikesMessage({required this.message, required this.onRetry});
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(message),
-        const SizedBox(height: 10),
-        TextButton(onPressed: onRetry, child: const Text('Reload')),
-      ],
-    ),
-  );
-}
-
-String _mediaUrl(String value) {
-  final uri = Uri.parse(value);
-  return uri.hasScheme
-      ? uri.toString()
-      : Uri.parse(AppConfig.baseAppUrl).resolve(value).toString();
-}
+DiscoveryProfile _profileSeed(LikesUser user) => DiscoveryProfile(
+  id: user.id,
+  firstName: user.firstName,
+  dateOfBirth: user.dateOfBirth,
+  city: user.city,
+  aboutMe: user.aboutMe,
+  photoUrl: user.avatarUrl,
+  interests: const [],
+  attributes: const {},
+);

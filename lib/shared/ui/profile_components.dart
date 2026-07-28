@@ -320,12 +320,14 @@ class ProfileActionBar extends StatelessWidget {
     required this.onLike,
     this.passLoading = false,
     this.likeLoading = false,
+    this.showPass = true,
   });
 
   final VoidCallback? onPass;
   final VoidCallback? onLike;
   final bool passLoading;
   final bool likeLoading;
+  final bool showPass;
 
   @override
   Widget build(BuildContext context) {
@@ -337,19 +339,21 @@ class ProfileActionBar extends StatelessWidget {
         padding: const EdgeInsets.all(AppTokens.space8),
         child: Row(
           children: [
-            Expanded(
-              child: FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: SecondaryActionButton(
-                  key: const Key('public-profile-pass'),
-                  label: 'Pass',
-                  icon: Icons.close_rounded,
-                  loading: passLoading,
-                  onPressed: onPass,
+            if (showPass) ...[
+              Expanded(
+                child: FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: SecondaryActionButton(
+                    key: const Key('public-profile-pass'),
+                    label: 'Pass',
+                    icon: Icons.close_rounded,
+                    loading: passLoading,
+                    onPressed: onPass,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppTokens.space8),
+              const SizedBox(width: AppTokens.space8),
+            ],
             Expanded(
               child: FocusTraversalOrder(
                 order: const NumericFocusOrder(2),

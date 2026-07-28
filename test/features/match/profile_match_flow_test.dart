@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:swipe_mobile_re/app/router/routes.dart';
 import 'package:swipe_mobile_re/features/chat/application/chat_providers.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_models.dart';
 import 'package:swipe_mobile_re/features/chat/domain/chat_repository.dart';
 import 'package:swipe_mobile_re/features/discovery/application/discovery_providers.dart';
 import 'package:swipe_mobile_re/features/discovery/discovery_screen.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_models.dart';
+import 'package:swipe_mobile_re/features/discovery/domain/discovery_preferences.dart';
 import 'package:swipe_mobile_re/features/discovery/domain/discovery_repository.dart';
 import 'package:swipe_mobile_re/features/match/match_screen.dart';
 import 'package:swipe_mobile_re/features/profile/application/profile_providers.dart';
@@ -49,7 +51,10 @@ void main() {
       expect(find.byKey(const Key('chat-destination')), findsOneWidget);
       expect(chatRepository.lookupCalls, 1);
       expect(chatRepository.createCalls, 0);
-      expect(router.routeInformationProvider.value.uri.path, '/chat/42');
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        Routes.chatFor(42),
+      );
     },
   );
 
@@ -97,7 +102,7 @@ GoRouter _router({String initialLocation = '/discover'}) {
         ),
       ),
       GoRoute(
-        path: '/chat/:id',
+        path: Routes.chat,
         builder: (context, state) => Scaffold(
           body: Center(
             child: Text(
@@ -145,7 +150,9 @@ class _FakeDiscoveryRepository implements DiscoveryRepository {
   int reactionCalls = 0;
 
   @override
-  Future<List<DiscoveryProfile>> getProfiles() async => [_discovery];
+  Future<List<DiscoveryProfile>> getProfiles(
+    DiscoveryPreferences preferences,
+  ) async => [_discovery];
 
   @override
   Future<DiscoveryReactionResult> react(
@@ -164,10 +171,24 @@ class _FakePublicProfileRepository implements PublicProfileRepository {
 
 class _FakeProfileRepository implements ProfileRepository {
   @override
+  Future<UserProfile> deletePhoto(
+    int photoId, {
+    bool wasAvatar = false,
+  }) async => _currentProfile;
+
+  @override
+  Future<ProfileEditCatalog> getEditCatalog() async =>
+      const ProfileEditCatalog();
+
+  @override
   Future<UserProfile> getCurrentProfile() async => _currentProfile;
 
   @override
   Future<UserProfile> setAvatar(int photoId) async => _currentProfile;
+
+  @override
+  Future<UserProfile> saveProfile(ProfileSaveRequest request) async =>
+      _currentProfile;
 
   @override
   Future<UserProfile> updateProfile(ProfileUpdate update) async =>
@@ -199,6 +220,14 @@ class _FakeChatRepository implements ChatRepository {
 
   @override
   Future<ChatDetails> getChatDetails(int chatId) => throw UnimplementedError();
+
+  @override
+  Future<ChatMessagePage> getMessages(
+    int chatId, {
+    String? before,
+    int limit = 30,
+  }) async =>
+      const ChatMessagePage(items: [], nextCursor: null, hasMore: false);
 
   @override
   Future<int?> getChatIdByUserId(int userId) async {
@@ -237,6 +266,7 @@ const _currentProfile = UserProfile(
   firstName: 'Alex',
   lastName: 'North',
   dateOfBirth: null,
+  gender: 'male',
   city: 'Demo City',
   aboutMe: '',
   status: '',

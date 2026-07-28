@@ -5,9 +5,10 @@ import 'package:swipe_mobile_re/features/subscription/application/subscription_p
 import 'package:swipe_mobile_re/features/subscription/domain/subscription_models.dart';
 import 'package:swipe_mobile_re/features/subscription/domain/subscription_repository.dart';
 import 'package:swipe_mobile_re/features/subscription/subscription_screen.dart';
+import 'package:swipe_mobile_re/shared/ui/app_theme.dart';
 
 void main() {
-  testWidgets('complete checkout, confirmation and cancel renewal flow', (
+  testWidgets('checkout stays locked until backend activates Premium', (
     tester,
   ) async {
     final repository = E2eSubscriptionRepository();
@@ -26,43 +27,38 @@ void main() {
             const SubscriptionPollConfig(maxAttempts: 0),
           ),
         ],
-        child: const MaterialApp(home: SubscriptionScreen()),
+        child: MaterialApp(
+          theme: AppTheme.midnight(),
+          home: const SubscriptionScreen(),
+        ),
       ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('E2E Premium'), findsOneWidget);
-    final continueButton = find.text('Continue');
+    final continueButton = find.text('Continue to payment');
     await tester.ensureVisible(continueButton);
     await tester.tap(continueButton);
-    await tester.pump(const Duration(milliseconds: 10));
+    await tester.pumpAndSettle();
 
     expect(repository.checkoutCalls, 1);
     expect(launcher.urls.single, Uri.parse('https://pay.test/e2e'));
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -360));
+    await tester.pumpAndSettle();
     expect(find.text('Check payment'), findsOneWidget);
+    expect(find.text('Premium is active'), findsNothing);
 
     repository.paymentStatus = PaymentStatus.succeeded;
     await tester.tap(find.text('Check payment'));
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Payment confirmed. Premium is active.'), findsOneWidget);
-    expect(find.text('Active subscription'), findsOneWidget);
-    expect(find.text('Until 12.08.2026'), findsOneWidget);
-    expect(find.text('Auto-renewal is on'), findsOneWidget);
+    expect(find.text('Premium is active'), findsOneWidget);
+    expect(find.text('E2E Premium'), findsOneWidget);
+    expect(find.text('Access until 12.08.2026'), findsOneWidget);
+    expect(find.textContaining('Auto-renewal'), findsNothing);
+    expect(find.textContaining('Turn off'), findsNothing);
     expect(profileRefreshes, 1);
-
-    final cancelButton = find.text('Turn off auto-renewal');
-    await tester.ensureVisible(cancelButton);
-    await tester.tap(cancelButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.widgetWithText(TextButton, 'Turn off'));
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(repository.cancelCalls, 1);
-    expect(find.text('Auto-renewal is off'), findsOneWidget);
-    expect(find.text('Until 12.08.2026'), findsOneWidget);
   });
 }
 
@@ -79,7 +75,6 @@ class RecordingLauncher implements PaymentUrlLauncher {
 class E2eSubscriptionRepository implements SubscriptionRepository {
   PaymentStatus paymentStatus = PaymentStatus.pending;
   int checkoutCalls = 0;
-  int cancelCalls = 0;
   ActiveSubscription? activeSubscription;
 
   @override
@@ -124,7 +119,7 @@ class E2eSubscriptionRepository implements SubscriptionRepository {
         subscriptionId: 7,
         name: 'E2E Premium',
         startAt: DateTime.utc(2026, 7, 13),
-        endAt: DateTime.utc(2026, 8, 12),
+        endAt: DateTime.utc(2026, 8, 12, 12),
         renewable: true,
       );
     }
@@ -138,18 +133,7 @@ class E2eSubscriptionRepository implements SubscriptionRepository {
   }
 
   @override
-  Future<ActiveSubscription> cancelRenewal() async {
-    cancelCalls++;
-    final current = activeSubscription!;
-    activeSubscription = ActiveSubscription(
-      subscriptionId: current.subscriptionId,
-      name: current.name,
-      startAt: current.startAt,
-      endAt: current.endAt,
-      renewable: false,
-    );
-    return activeSubscription!;
-  }
+  Future<ActiveSubscription> cancelRenewal() => throw UnimplementedError();
 
   @override
   Future<PaymentStatusResponse> setDemoPaymentResult(

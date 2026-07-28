@@ -70,9 +70,19 @@ class SessionStorage implements ApiTokenStore {
 
   @override
   Future<void> clear() async {
-    await _backend.delete(accessTokenKey);
-    await _backend.delete(refreshTokenKey);
-    _accessTokenChanges.add(null);
+    Object? firstError;
+    try {
+      await _backend.delete(accessTokenKey);
+    } on Object catch (error) {
+      firstError = error;
+    }
+    try {
+      await _backend.delete(refreshTokenKey);
+    } on Object catch (error) {
+      firstError ??= error;
+    }
+    if (!_accessTokenChanges.isClosed) _accessTokenChanges.add(null);
+    if (firstError != null) throw firstError;
   }
 
   Future<void> dispose() => _accessTokenChanges.close();

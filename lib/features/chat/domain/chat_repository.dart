@@ -7,6 +7,11 @@ abstract interface class ChatRepository {
   Future<List<ChatSummary>> getChats();
   Future<ChatDetails> getChatDetails(int chatId);
   Future<int?> getChatIdByUserId(int userId);
+  Future<ChatMessagePage> getMessages(
+    int chatId, {
+    String? before,
+    int limit = 30,
+  });
 }
 
 class DioChatRepository implements ChatRepository {
@@ -57,5 +62,22 @@ class DioChatRepository implements ChatRepository {
       if (error.statusCode == 404) return null;
       rethrow;
     }
+  }
+
+  @override
+  Future<ChatMessagePage> getMessages(
+    int chatId, {
+    String? before,
+    int limit = 30,
+  }) async {
+    final queryParameters = <String, dynamic>{'limit': limit};
+    if (before != null) queryParameters['before'] = before;
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      '/communication/$chatId/messages',
+      queryParameters: queryParameters,
+    );
+    final data = response.data;
+    if (data == null) throw const FormatException('Empty chat history page');
+    return ChatMessagePage.fromJson(data, chatId: chatId);
   }
 }
